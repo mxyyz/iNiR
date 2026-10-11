@@ -2,7 +2,7 @@
   <img src="docs/images/iris-2.32-principal.webp" alt="iNiR iRiS desktop" width="900">
 </p>
 
-<h1 align="center">iNiR</h1>
+<h1 align="center">modified iNiR</h1>
 
 <p align="center">
   <b>A complete desktop shell for Niri, built on Quickshell</b>
