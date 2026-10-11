@@ -23,7 +23,6 @@ IrisNotesFace 1.0 IrisNotesFace.qml
 IrisWorldClockFace 1.0 IrisWorldClockFace.qml
 IrisUptimeFace 1.0 IrisUptimeFace.qml
 IrisDayFace 1.0 IrisDayFace.qml
-IrisNewsFace 1.0 IrisNewsFace.qml
 IrisSizeGrip 1.0 IrisSizeGrip.qml
 IrisControlsFace 1.0 IrisControlsFace.qml
 IrisScreenTimeFace 1.0 IrisScreenTimeFace.qml

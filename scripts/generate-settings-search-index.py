@@ -97,10 +97,8 @@ def family_ranges(lines: list[str]) -> list[tuple[int, int, str]]:
 
         if pending_loader is not None and "requested:" in line:
             family = ""
-            if re.search(r'!\s*[A-Za-z0-9_.]+\.isWaffle\b|\bisIiActive\b|panelFamily[^\n]*!==?\s*"waffle"', line):
+            if re.search(r'\bisIiActive\b', line):
                 family = "ii"
-            elif re.search(r'\bisWaffle(?:Active)?\b|panelFamily[^\n]*===?\s*"waffle"', line):
-                family = "waffle"
             pending_loader = (pending_loader[0], pending_loader[1], family)
 
         depth += brace_delta(line)

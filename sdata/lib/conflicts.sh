@@ -16,12 +16,6 @@ check_conflicts() {
     
     if command -v pacman &>/dev/null; then
         package_manager="pacman"
-    elif command -v xbps-query &>/dev/null; then
-        package_manager="xbps"
-    elif command -v rpm &>/dev/null; then
-        package_manager="rpm"
-    elif command -v dpkg &>/dev/null; then
-        package_manager="dpkg"
     fi
     
     # Define conflict groups
@@ -89,15 +83,6 @@ check_conflicts() {
                     [[ -n "$real" ]] || real="$pkg"
                 fi
                 ;;
-            xbps)
-                if xbps-query -p pkgver "$pkg" &>/dev/null; then installed=true; fi
-                ;;
-            rpm)
-                if rpm -q "$pkg" &>/dev/null; then installed=true; fi
-                ;;
-            dpkg)
-                if dpkg -s "$pkg" &>/dev/null; then installed=true; fi
-                ;;
             *)
                 # Fallback: check if binary exists in path
                 if command -v "$pkg" &>/dev/null; then installed=true; fi
@@ -133,7 +118,7 @@ check_conflicts() {
             echo -e "These packages ship their own Quickshell runtime or configs that directly conflict."
             echo ""
 
-            if [[ "$package_manager" == "pacman" || "$package_manager" == "xbps" ]]; then
+            if [[ "$package_manager" == "pacman" ]]; then
                 # On supported native package managers, offer to remove critical
                 # conflicts now rather than continuing with a known-broken shell.
                 # Removal order matters: meta-packages first, then shells, then runtimes.
@@ -231,9 +216,6 @@ _remove_critical_conflicts() {
             pacman)
                 pacman -Qi "$pkg" &>/dev/null 2>&1 || continue
                 ;;
-            xbps)
-                xbps-query -p pkgver "$pkg" &>/dev/null 2>&1 || continue
-                ;;
             *)
                 continue
                 ;;
@@ -252,10 +234,6 @@ _remove_critical_conflicts() {
             pacman)
                 pkg_sudo pacman -Rdd --noconfirm "$pkg" 2>/dev/null \
                     || pkg_sudo pacman -R --noconfirm "$pkg" 2>/dev/null \
-                    || log_warning "Could not remove $pkg — install may fail"
-                ;;
-            xbps)
-                pkg_sudo xbps-remove -R -- "$pkg" 2>/dev/null \
                     || log_warning "Could not remove $pkg — install may fail"
                 ;;
         esac

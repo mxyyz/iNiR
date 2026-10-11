@@ -266,22 +266,6 @@ get_installed_package_manager() {
 
     if command -v pacman &>/dev/null; then
         echo "pacman"
-    elif command -v dnf &>/dev/null; then
-        echo "dnf"
-    elif command -v rpm-ostree &>/dev/null; then
-        echo "rpm-ostree"
-    elif command -v apt &>/dev/null; then
-        echo "apt"
-    elif command -v zypper &>/dev/null; then
-        echo "zypper"
-    elif command -v xbps-install &>/dev/null; then
-        echo "xbps"
-    elif command -v emerge &>/dev/null; then
-        echo "emerge"
-    elif command -v nixos-rebuild &>/dev/null || command -v nix &>/dev/null; then
-        echo "nix"
-    elif command -v apk &>/dev/null; then
-        echo "apk"
     else
         echo "unknown"
     fi
@@ -294,14 +278,6 @@ get_installed_package_name() {
 get_default_package_update_hint() {
     case "$(get_installed_package_manager)" in
         pacman) echo "sudo pacman -Syu" ;;
-        apt) echo "sudo apt update && sudo apt upgrade" ;;
-        dnf) echo "sudo dnf upgrade" ;;
-        rpm-ostree) echo "rpm-ostree upgrade" ;;
-        zypper) echo "sudo zypper dup" ;;
-        xbps) echo "sudo xbps-install -Su" ;;
-        emerge) echo "sudo emerge --sync && sudo emerge -avuDN @world" ;;
-        nix) echo "nixos-rebuild switch" ;;
-        apk) echo "sudo apk upgrade" ;;
         *) echo "use your package manager to update iNiR" ;;
     esac
 }

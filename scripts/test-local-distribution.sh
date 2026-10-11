@@ -922,17 +922,6 @@ if grep -Fq 'niri-focused-booster' "$runtime_root/defaults/niri/config.d/50-star
     exit 1
 fi
 
-fedora_installer="$runtime_root/sdata/dist-fedora/install-deps.sh"
-if ! grep -Fq 'fedora_quickshell_compatible' "$fedora_installer" \
-        || ! grep -Fq 'FEDORA_REPO_PKGS=' "$fedora_installer" \
-        || ! grep -Eq '^[[:space:]]+sddm$' "$fedora_installer"; then
-    printf 'FAIL: Fedora installer lost repository-first/version-aware package planning or SDDM\n' >&2
-    exit 1
-fi
-if grep -Fq 'rpmfusion-nonfree-release' "$fedora_installer"; then
-    printf 'FAIL: Fedora installer enables RPM Fusion Nonfree without an iNiR dependency requiring it\n' >&2
-    exit 1
-fi
 setups_script="$runtime_root/sdata/subcmd-install/2.setups.sh"
 # Install keeps a login screen the machine already has: SDDM takes over only when there is none or the
 # person says so on a first install (#279). Disabling GDM & co. outside that decision put hybrid laptops
@@ -958,64 +947,23 @@ if ! grep -Fq 'Current=${THEME_NAME}' "$sddm_installer"; then
     printf 'FAIL: ii-pixel theme installer no longer configures the SDDM theme\n' >&2
     exit 1
 fi
-if grep -Fq '${cmd_to_pkg[$cmd]:-$cmd}' "$fedora_installer"; then
-    printf 'FAIL: Fedora Doctor repair can still pass unknown command IDs directly to dnf\n' >&2
-    exit 1
-fi
-for required in \
-    '[qalc]="qalculate"' \
-    '[nm-connection-editor]="nm-connection-editor"' \
-    'install_awww_fedora' \
-    'install_gowall_fedora' \
-    'install_missioncenter_fedora' \
-    'install_songrec_fedora'; do
-    if ! grep -Fq "$required" "$fedora_installer"; then
-        printf 'FAIL: Fedora dependency repair lost required route: %s\n' "$required" >&2
-        exit 1
-    fi
-done
-if ! grep -Fq 'dnf copr enable -y scottames/awww' "$fedora_installer" \
-        || ! grep -Fq 'dnf copr enable -y achno/gowall' "$fedora_installer"; then
-    printf 'FAIL: Fedora awww/Gowall no longer prefer their focused COPR packages before source fallbacks\n' >&2
-    exit 1
-fi
 if ! grep -Fq '[[ "${OS_GROUP_ID:-unknown}" == "arch" ]]' "$runtime_root/sdata/lib/doctor.sh"; then
     printf 'FAIL: Doctor no longer scopes checkupdates to Arch\n' >&2
     exit 1
 fi
 if ! grep -Fq 'ocr-jpn:OCR Japanese data' "$runtime_root/sdata/lib/doctor.sh" \
-        || ! grep -Fq '[ocr-jpn]="tesseract-data-jpn"' "$arch_installer" \
-        || ! grep -Fq '[ocr-jpn]="tesseract-langpack-jpn"' "$fedora_installer"; then
+        || ! grep -Fq '[ocr-jpn]="tesseract-data-jpn"' "$arch_installer"; then
     printf 'FAIL: Doctor/installers no longer repair missing OCR language data\n' >&2
     exit 1
 fi
 
-debian_installer="$runtime_root/sdata/dist-debian/install-deps.sh"
-if ! grep -Fq 'ensure_debian_backports' "$debian_installer" \
-        || ! grep -Fq 'ensure_debian_component "contrib"' "$debian_installer" \
-        || ! grep -Fq 'polkitd' "$debian_installer"; then
-    printf 'FAIL: Debian installer lost backports/contrib/Trixie compatibility handling\n' >&2
-    exit 1
-fi
 # The shell is the only polkit agent: nothing installs or starts another one.
 if grep -rnE --exclude-dir=pkg --exclude-dir=src --exclude='*.pkg.tar*' \
         'polkit-gnome|polkit-kde|policykit-1-gnome|mate-polkit|lxpolkit|lxqt-policykit' \
-        "$runtime_root/sdata/dist-arch" "$runtime_root/sdata/dist-fedora" "$runtime_root/sdata/dist-debian" \
-        "$runtime_root/sdata/dist-generic" "$runtime_root/sdata/lib/deps-map.sh" "$runtime_root/sdata/subcmd-install" \
-        "$runtime_root/defaults/niri" "$runtime_root/dots/.config/niri" "$runtime_root/distro/arch" "$runtime_root/nix" >&2; then
+        "$runtime_root/sdata/dist-arch" \
+        "$runtime_root/sdata/lib/deps-map.sh" "$runtime_root/sdata/subcmd-install" \
+        "$runtime_root/defaults/niri" "$runtime_root/dots/.config/niri" "$runtime_root/distro/arch" >&2; then
     printf 'FAIL: an external polkit agent is installed or started beside the shell'"'"'s own\n' >&2
-    exit 1
-fi
-if ! grep -Fq 'libpolkit-agent-1-dev' "$debian_installer" || ! grep -Fq -- '-DSERVICE_POLKIT=ON' "$debian_installer"; then
-    printf 'FAIL: Debian builds Quickshell without its Polkit module\n' >&2
-    exit 1
-fi
-if grep -Fq 'tui_info "Setting up Rust toolchain..."' "$debian_installer"; then
-    printf 'FAIL: Debian installer installs Rust unconditionally instead of only for source fallbacks\n' >&2
-    exit 1
-fi
-if ! grep -Fq '[ocr-jpn]="tesseract-ocr-jpn"' "$debian_installer"; then
-    printf 'FAIL: Debian Doctor repair lost Japanese OCR language mapping\n' >&2
     exit 1
 fi
 
@@ -1025,21 +973,6 @@ if ! grep -Fq 'Mod+Shift+S { spawn "inir" "region" "menu"; }' "$runtime_root/def
     printf 'FAIL: remembered Super+Shift+S snip flow is incomplete\n' >&2
     exit 1
 fi
-if grep -Fq '${cmd_to_pkg[$cmd]:-$cmd}' "$debian_installer"; then
-    printf 'FAIL: Debian Doctor repair can still pass unknown command IDs directly to apt\n' >&2
-    exit 1
-fi
-for required in \
-    '[qalc]="qalc"' \
-    '[nm-connection-editor]="network-manager-gnome"' \
-    'io.missioncenter.MissionCenter' \
-    'golang-go' \
-    'cargo install --root "$SONGREC_ROOT" songrec'; do
-    if ! grep -Fq "$required" "$debian_installer"; then
-        printf 'FAIL: Debian dependency repair/provider route missing: %s\n' "$required" >&2
-        exit 1
-    fi
-done
 
 ocr_runner="$runtime_root/scripts/ocr-runner.sh"
 region_selector="$runtime_root/modules/regionSelector/RegionSelection.qml"
@@ -1127,18 +1060,6 @@ for pkg in tesseract-data-rus tesseract-data-jpn tesseract-data-jpn_vert tessera
         exit 1
     }
 done
-for pkg in tesseract-langpack-rus tesseract-langpack-jpn tesseract-langpack-jpn_vert tesseract-langpack-chi_sim tesseract-langpack-chi_tra; do
-    grep -Fq "$pkg" "$fedora_installer" || {
-        printf 'FAIL: Fedora installer is missing OCR language package %s\n' "$pkg" >&2
-        exit 1
-    }
-done
-for pkg in tesseract-ocr-rus tesseract-ocr-jpn tesseract-ocr-jpn-vert tesseract-ocr-chi-sim tesseract-ocr-chi-tra; do
-    grep -Fq "$pkg" "$debian_installer" || {
-        printf 'FAIL: Debian installer is missing OCR language package %s\n' "$pkg" >&2
-        exit 1
-    }
-done
 
 jp_dictionary="$runtime_root/scripts/japanese-dictionary.py"
 if [[ ! -x "$jp_dictionary" ]]; then
@@ -1216,7 +1137,6 @@ fi
 step "Foot generated color include"
 foot_default="$runtime_root/dots/.config/foot/foot.ini"
 terminal_generator="$runtime_root/scripts/colors/generate_terminal_configs.py"
-package_installers="$runtime_root/sdata/lib/package-installers.sh"
 uninstall_lib="$runtime_root/sdata/lib/uninstall.sh"
 if ! grep -qx 'include=~/.config/foot/inir-colors.ini' "$foot_default"; then
     printf 'FAIL: shipped Foot config does not reference the managed inir-colors.ini file\n' >&2
@@ -1234,10 +1154,6 @@ for needle in \
         exit 1
     fi
 done
-if ! grep -Fq 'include=~/.config/foot/inir-colors.ini' "$package_installers"; then
-    printf 'FAIL: Foot installer disagrees with generated color path\n' >&2
-    exit 1
-fi
 if ! grep -Fq 'foot/inir-colors.ini' "$uninstall_lib" \
         || ! grep -Fq 'foot/colors.ini' "$uninstall_lib"; then
     printf 'FAIL: Foot uninstall must clean the managed file and its legacy predecessor\n' >&2
@@ -1269,12 +1185,6 @@ grep -Fq 'YT Music JS runtime unavailable' "$runtime_root/sdata/lib/doctor.sh" |
     exit 1
 }
 
-if grep -Fq 'python3-ytmusicapi' "$runtime_root/sdata/dist-fedora/install-deps.sh" \
-        || grep -Fq 'python3-ytmusicapi' "$runtime_root/sdata/dist-debian/install-deps.sh" \
-        || grep -Fq 'python3-ytmusicapi' "$runtime_root/sdata/dist-void/install-deps.sh"; then
-    printf 'FAIL: setup-managed distros still depend on a stale distro ytmusicapi package\n' >&2
-    exit 1
-fi
 for dependency in deno yt-dlp-ejs; do
     grep -Eq "^[[:space:]]*${dependency}[[:space:]]*$" "$runtime_root/sdata/dist-arch/inir-audio/PKGBUILD" || {
         printf 'FAIL: Arch audio bundle lacks %s\n' "$dependency" >&2
@@ -1287,14 +1197,6 @@ for dependency in deno python-ytmusicapi yt-dlp yt-dlp-ejs; do
         exit 1
     }
 done
-if ! grep -Fq 'ps.ytmusicapi' "$runtime_root/nix/package.nix" \
-        || ! grep -Fq 'ps.yt-dlp' "$runtime_root/nix/package.nix" \
-        || ! grep -Fq 'ps.secretstorage' "$runtime_root/nix/package.nix" \
-        || ! grep -Eq '^[[:space:]]+deno$' "$runtime_root/nix/package.nix" \
-        || ! grep -Eq '^[[:space:]]+yt-dlp$' "$runtime_root/nix/package.nix"; then
-    printf 'FAIL: Nix runtime does not provide the complete YT Music runtime\n' >&2
-    exit 1
-fi
 
 ytmusic_service="$runtime_root/services/YtMusic.qml"
 if grep -Eq '/usr/bin/(yt-dlp|mpv)|js-runtimes=node' "$ytmusic_service" \
@@ -1598,70 +1500,6 @@ if [[ -d "$runtime_root/distro/arch" ]]; then
     fi
 fi
 
-step "Void package-managed versioning"
-versioning_root="$(mktemp -d)"
-if ! (
-    export HOME="$versioning_root/home"
-    export XDG_CONFIG_HOME="$versioning_root/home/.config"
-    export XDG_CONFIG_HOME_RESOLVED="$versioning_root/home/.config"
-    export XDG_CACHE_HOME="$versioning_root/home/.cache"
-    export XDG_RUNTIME_DIR="$versioning_root/runtime-dir"
-    export REPO_ROOT="$runtime_root"
-    export INIR_INSTALL_MODE=package-managed
-    export INIR_UPDATE_STRATEGY=package-manager
-    export INIR_PACKAGE_MANAGER=xbps
-    export INIR_PACKAGE_NAME=inir
-    mkdir -p "$XDG_CONFIG_HOME_RESOLVED/inir" "$XDG_RUNTIME_DIR"
-    source "$runtime_root/sdata/lib/versioning.sh"
-    write_version_info_json "$VERSION_FILE_LOCAL" "1.2.3" "abc123" "package"
-    [[ "$(get_installed_install_mode)" == package-managed ]]
-    [[ "$(get_installed_update_strategy)" == package-manager ]]
-    [[ "$(get_installed_package_manager)" == xbps ]]
-    [[ "$(get_installed_package_update_hint)" == "sudo xbps-install -Su" ]]
-    jq -e '
-        .installMode == "package-managed" and
-        .updateStrategy == "package-manager" and
-        .packageManager == "xbps" and
-        .packageName == "inir"
-    ' "$VERSION_FILE_LOCAL" >/dev/null
-    mkdir -p "$versioning_root/runtime"
-    touch "$versioning_root/runtime/shell.qml"
-    cp "$VERSION_FILE_LOCAL" "$versioning_root/runtime/version.json"
-    INIR_RUNTIME_DIR="$versioning_root/runtime" \
-        "$runtime_root/scripts/inir" version --json \
-        | jq -e '.installMode == "package-managed" and .packageManager == "xbps"' >/dev/null
-); then
-    rm -rf "$versioning_root"
-    printf 'FAIL: Void package-managed version metadata/update contract is broken\n' >&2
-    exit 1
-fi
-rm -rf "$versioning_root"
-
-step "Void release checker canonical branch"
-closure_branch_root="$(mktemp -d)"
-if ! (
-    git clone --quiet --shared "$runtime_root" "$closure_branch_root/repo"
-    git -C "$closure_branch_root/repo" switch --quiet -C prerelease
-    for path in \
-        scripts/check-void-closure.sh \
-        scripts/sddm/install-pixel-sddm.sh \
-        sdata/dist-void/install-deps.sh \
-        sdata/lib/functions.sh \
-        setup; do
-        cp "$runtime_root/$path" "$closure_branch_root/repo/$path"
-    done
-    expected_commit="$(git -C "$closure_branch_root/repo" rev-parse HEAD)"
-    INIR_STATIC_ONLY=true \
-        INIR_ALLOW_DIRTY=true \
-        INIR_EXPECTED_COMMIT="$expected_commit" \
-        "$closure_branch_root/repo/scripts/check-void-closure.sh" >/dev/null
-); then
-    rm -rf "$closure_branch_root"
-    printf 'FAIL: Void closure checker does not accept canonical prerelease branch by default\n' >&2
-    exit 1
-fi
-rm -rf "$closure_branch_root"
-
 step "release polish guards"
 config_qml="$runtime_root/modules/common/Config.qml"
 game_mode_qml="$runtime_root/services/GameMode.qml"
@@ -1678,15 +1516,7 @@ pill_music_bars="$runtime_root/modules/pill/MusicBars.qml"
 quick_config="$runtime_root/modules/settings/QuickConfig.qml"
 waffle_general="$runtime_root/modules/waffle/settings/pages/WGeneralPage.qml"
 
-mascot_pack_nix="$runtime_root/nix/mascot-pack.nix"
-mascot_package_nix="$runtime_root/nix/mascot-package.nix"
-mascot_tag="$(sed -n 's#.*releases/download/\(v[0-9][^/]*\)/inir-mascot-pack\.tar\.gz.*#\1#p' "$mascot_pack_nix" | head -n1)"
-mascot_version="$(sed -n 's/^[[:space:]]*version = "\([^"]*\)";.*/\1/p' "$mascot_package_nix" | head -n1)"
-if [[ -z "$mascot_tag" || -z "$mascot_version" || "$mascot_tag" != "v${mascot_version}" ]]; then
-    printf 'FAIL: Nix mascot package version (%s) does not match pinned release tag (%s)\n' "$mascot_version" "$mascot_tag" >&2
-    exit 1
-fi
-if grep -Eq '354 poses|354 poses/animations|~32 MiB' "$runtime_root/setup" "$runtime_root/sdata/lib/extras.sh" "$runtime_root/docs/INSTALL.md" "$mascot_package_nix"; then
+if grep -Eq '354 poses|354 poses/animations|~32 MiB' "$runtime_root/setup" "$runtime_root/sdata/lib/extras.sh" "$runtime_root/docs/INSTALL.md"; then
     printf 'FAIL: mascot install UX contains a stale hard-coded pack size/count\n' >&2
     exit 1
 fi
@@ -2364,7 +2194,6 @@ if ! grep -Fq 'service", "restart' "$memory_service" \
         || ! grep -Fq 'inir-xembedsniproxy' "$tray_service" \
         || ! grep -Fq 'sv up' "$tray_service" \
         || ! grep -Fq 'xembed_service_dir' "$runtime_root/sdata/lib/functions.sh" \
-        || ! grep -Fq 'exec chpst -e "$TURNSTILE_ENV_DIR" sh -c' "$runtime_root/sdata/lib/functions.sh" \
         || ! grep -Fq 'dbus-update-activation-environment' "$cursor_helper" \
         || ! grep -Fq 'systemd/private' "$gtk_theme"; then
     printf 'FAIL: non-systemd runtime adapters are incomplete\n' >&2
@@ -2400,18 +2229,14 @@ step "optional systemd adapters"
 awww_backend="$runtime_root/services/AwwwBackend.qml"
 capture_helper="$runtime_root/scripts/capture-windows.sh"
 thumbnail_helper="$runtime_root/scripts/thumbnails/thumbgen-venv.sh"
-void_deps="$runtime_root/sdata/dist-void/install-deps.sh"
 if ! grep -Fq 'systemd/private' "$awww_backend" \
         || ! grep -Fq 'systemctl --user show-environment' "$awww_backend" \
         || ! grep -Fq '\${XDG_RUNTIME_DIR:-}/systemd/private' "$awww_backend" \
         || ! grep -Fq 'systemd/private' "$capture_helper" \
         || ! grep -Fq 'systemctl --user show-environment' "$capture_helper" \
         || ! grep -Fq 'systemd/private' "$thumbnail_helper" \
-        || ! grep -Fq 'systemctl --user show-environment' "$thumbnail_helper" \
-        || ! grep -Eq '^[[:space:]]+pipewire$' "$void_deps" \
-        || ! grep -Eq '^[[:space:]]+awww$' "$void_deps" \
-        || ! grep -Eq '^[[:space:]]+jq$' "$void_deps"; then
-    printf 'FAIL: optional systemd adapters or Void providers are incomplete\n' >&2
+        || ! grep -Fq 'systemctl --user show-environment' "$thumbnail_helper"; then
+    printf 'FAIL: optional systemd adapters are incomplete\n' >&2
     exit 1
 fi
 if grep -R -Fq 'inirhotspot' "$runtime_root/defaults" "$runtime_root/modules"; then
@@ -2422,7 +2247,7 @@ if ! grep -Fq '/dev/urandom' "$runtime_root/sdata/subcmd-install/3.files.sh"; th
     printf 'FAIL: fresh installs do not generate a hotspot password\n' >&2
     exit 1
 fi
-# Game Mode closes discover-overlay only where it is installed; the switch hides elsewhere (Void has no package).
+# Game Mode closes discover-overlay only where it is installed; the switch hides elsewhere.
 if ! grep -Fq 'command -v discover-overlay' "$runtime_root/services/GameMode.qml" \
         || ! grep -Fq 'root.discoverOverlayInstalled' "$runtime_root/services/GameMode.qml" \
         || ! grep -Fq 'visible: GameMode.discoverOverlayInstalled' "$runtime_root/modules/settings/QuickConfig.qml" \
@@ -2441,20 +2266,6 @@ for warp_toggle in \
         exit 1
     fi
 done
-warp_functions="$runtime_root/sdata/lib/functions.sh"
-for needle in \
-    'log_run_file=/etc/sv/warp-svc/log/run' \
-    'exec vlogger -t warp-svc -p daemon'; do
-    if ! grep -Fq "$needle" "$warp_functions"; then
-        printf 'FAIL: Void WARP runit logger contract missing: %s\n' "$needle" >&2
-        exit 1
-    fi
-done
-if ! grep -Fq 'missing_cmds+=("darkly")' "$runtime_root/sdata/lib/doctor.sh" \
-        || ! grep -Fq 'kcm_darklydecoration.so' "$runtime_root/sdata/lib/doctor.sh"; then
-    printf 'FAIL: Void dependency repair cannot detect the partial Darkly settings install\n' >&2
-    exit 1
-fi
 audio_helper="$runtime_root/sdata/lib/functions.sh"
 if ! grep -Fq 'reconcile_audio_user_services' "$audio_helper" \
         || ! grep -Fq 'pipewire-pulse' "$audio_helper" \
@@ -2594,13 +2405,11 @@ if grep -Fq 'MALLOC_ARENA_MAX' "$shell_exec" \
     exit 1
 fi
 
-# Generic distro setup must key off the platform-theme plugin itself, not the
+# Qt theming must key off the platform-theme plugin itself, not the
 # presence of a full Plasma desktop. Niri users commonly install
 # plasma-integration standalone.
-package_installers="$runtime_root/sdata/lib/package-installers.sh"
 doctor_lib="$runtime_root/sdata/lib/doctor.sh"
-if ! grep -Fq 'KDEPlasmaPlatformTheme6.so' "$package_installers" \
-        || ! grep -Fq 'config.d/40-environment.kdl' "$doctor_lib" \
+if ! grep -Fq 'config.d/40-environment.kdl' "$doctor_lib" \
         || ! grep -Fq 'KDEPlasmaPlatformTheme6.so' "$inir_launcher"; then
     printf 'FAIL: Qt theming setup/doctor does not support standalone plasma-integration with modular Niri config\n' >&2
     exit 1
@@ -2686,11 +2495,9 @@ if ! grep -Fq 'requestedWindowMaxAgeMs' "$preview_service" \
     printf 'FAIL: Orbit preview freshness/quality policy regressed\n' >&2
     exit 1
 fi
-home_nix_module="$runtime_root/nix/home-module.nix"
 if ! grep -Fq 'path="$(command -v "$name" 2>/dev/null || true)"' "$preview_capture" \
-        || grep -Fq '[[ ! -x "$bin" ]]' "$preview_capture" \
-        || ! grep -Fq 'PATH = lib.makeBinPath ([ cfg.package ] ++ cfg.extraPackages);' "$home_nix_module"; then
-    printf 'FAIL: packaged Nix preview dependencies are not resolved through the service PATH\n' >&2
+        || grep -Fq '[[ ! -x "$bin" ]]' "$preview_capture"; then
+    printf 'FAIL: packaged preview dependencies are not resolved through the service PATH\n' >&2
     exit 1
 fi
 if grep -Fq 'NavigationFineControls { visible: !root.workspaceMode }' "$orbit_studio" \
@@ -2852,8 +2659,6 @@ for audio_bin in pipewire wireplumber pipewire-pulse; do
     printf '#!/bin/sh\nexit 0\n' > "$reconcile_test_root/bin/$audio_bin"
     chmod +x "$reconcile_test_root/bin/$audio_bin"
 done
-printf '#!/bin/sh\nexit 0\n' > "$reconcile_test_root/bin/ydotoold"
-chmod +x "$reconcile_test_root/bin/ydotoold"
 cat > "$reconcile_test_root/home/.config/niri/config.d/50-startup.kdl" <<'KDL'
 // 50 — Processes spawned at login
 spawn-at-startup "bash" "-c" "systemctl --user import-environment XDG_MENU_PREFIX && kbuildsycoca6"
@@ -2862,9 +2667,6 @@ export HOME="$reconcile_test_root/home"
 export XDG_BIN_HOME="$reconcile_test_root/home/.local/bin"
 export XDG_CONFIG_HOME="$reconcile_test_root/home/.config"
 export XDG_RUNTIME_DIR="$reconcile_test_root/runtime"
-export INIR_TURNSTILED_SERVICE_PATH="$reconcile_test_root/var/service/turnstiled"
-export OS_GROUP_ID=void
-export INSTALL_TOOLKIT=true
 export PATH="$reconcile_test_root/bin:$PATH"
 if ! reconcile_inir_supervisor | grep -q '^runsvdir$'; then
     printf 'FAIL: reconcile_inir_supervisor did not select runsvdir\n' >&2
@@ -2884,12 +2686,6 @@ for audio_svc in pipewire wireplumber pipewire-pulse; do
         exit 1
     fi
 done
-ydotool_run="$reconcile_test_root/home/.config/service/ydotool/run"
-if [[ ! -x "$ydotool_run" ]] || ! grep -Fq '# Managed by iNiR.' "$ydotool_run"; then
-    printf 'FAIL: runsvdir ydotool service not created\n' >&2
-    rm -rf "$reconcile_test_root"
-    exit 1
-fi
 # Preserve a service owned by the user rather than replacing or deleting it.
 printf '#!/bin/sh\nexec user-pipewire\n' > "$reconcile_test_root/home/.config/service/pipewire/run"
 reconcile_audio_user_services runsvdir
@@ -2918,1331 +2714,6 @@ if ! diff -q "$startup_kdl" "$startup_kdl.bak" >/dev/null; then
     exit 1
 fi
 rm -rf "$reconcile_test_root"
-
-step "turnstile supervisor selection"
-turnstile_test_root="$(mktemp -d)"
-mkdir -p "$turnstile_test_root/bin" "$turnstile_test_root/home/.local/bin" "$turnstile_test_root/home/.config/niri/config.d" "$turnstile_test_root/var/service/turnstiled"
-mkdir -p "$turnstile_test_root/examples"
-printf '#!/bin/sh\nexit 0\n' > "$turnstile_test_root/examples/dbus.run"
-printf '#!/bin/sh\nexit 0\n' > "$turnstile_test_root/examples/dbus.check"
-chmod +x "$turnstile_test_root/examples/dbus.run" "$turnstile_test_root/examples/dbus.check"
-cat > "$turnstile_test_root/home/.local/bin/inir" <<'SH'
-#!/bin/sh
-exit 0
-SH
-chmod +x "$turnstile_test_root/home/.local/bin/inir"
-cat > "$turnstile_test_root/bin/systemctl" <<'SH'
-#!/bin/sh
-exit 1
-SH
-chmod +x "$turnstile_test_root/bin/systemctl"
-cat > "$turnstile_test_root/bin/sv" <<'SH'
-#!/bin/sh
-exit 1
-SH
-chmod +x "$turnstile_test_root/bin/sv"
-for audio_bin in pipewire wireplumber pipewire-pulse; do
-    printf '#!/bin/sh\nexit 0\n' > "$turnstile_test_root/bin/$audio_bin"
-    chmod +x "$turnstile_test_root/bin/$audio_bin"
-done
-printf '#!/bin/sh\nexit 0\n' > "$turnstile_test_root/bin/ydotoold"
-chmod +x "$turnstile_test_root/bin/ydotoold"
-printf '#!/bin/sh\nexit 0\n' > "$turnstile_test_root/bin/xembedsniproxy"
-chmod +x "$turnstile_test_root/bin/xembedsniproxy"
-cat > "$turnstile_test_root/bin/pgrep" <<'SH'
-#!/bin/sh
-printf '123\n'
-SH
-chmod +x "$turnstile_test_root/bin/pgrep"
-cat > "$turnstile_test_root/home/.config/niri/config.d/50-startup.kdl" <<'KDL'
-// BEGIN inir-runsvdir-fallback
-spawn-sh-at-startup "exec runsvdir ~/.config/service"
-// END inir-runsvdir-fallback
-KDL
-if ! (
-    export HOME="$turnstile_test_root/home"
-    export XDG_BIN_HOME="$turnstile_test_root/home/.local/bin"
-    export XDG_CONFIG_HOME="$turnstile_test_root/home/.config"
-    export XDG_RUNTIME_DIR="$turnstile_test_root/runtime"
-    export INIR_TURNSTILED_SERVICE_PATH="$turnstile_test_root/var/service/turnstiled"
-    export INIR_TURNSTILE_EXAMPLES="$turnstile_test_root/examples"
-    export OS_GROUP_ID=void
-    export INSTALL_TOOLKIT=true
-    export PATH="$turnstile_test_root/bin:$PATH"
-    result="$(reconcile_inir_supervisor)"
-    [[ "$result" == turnstile ]]
-    turnstile_run="$turnstile_test_root/home/.config/service/inir/run"
-    turnstile_conf="$turnstile_test_root/home/.config/service/turnstile-ready/conf"
-    grep -Fq 'chpst -e "$TURNSTILE_ENV_DIR"' "$turnstile_run"
-    grep -Fq 'QS_DISABLE_POLKIT=1' "$turnstile_run"
-    grep -Fq 'BEGIN inir-turnstile-environment' "$turnstile_test_root/home/.config/niri/config.d/50-startup.kdl"
-    grep -Fq 'turnstile-update-runit-env WAYLAND_DISPLAY XDG_RUNTIME_DIR DBUS_SESSION_BUS_ADDRESS NIRI_SOCKET' "$turnstile_test_root/home/.config/niri/config.d/50-startup.kdl"
-    grep -Fq '[ -n \"${WAYLAND_DISPLAY:-}\" ]' "$turnstile_test_root/home/.config/niri/config.d/50-startup.kdl"
-    ! grep -Fq '[ -n "${WAYLAND_DISPLAY:-}" ]' "$turnstile_test_root/home/.config/niri/config.d/50-startup.kdl"
-    grep -Fq 'export PATH=\"$HOME/.local/bin:$PATH\"' "$turnstile_test_root/home/.config/niri/config.d/50-startup.kdl"
-    grep -Fq 'export INIR_VENV=\"$HOME/.local/state/quickshell/.venv\"' "$turnstile_test_root/home/.config/niri/config.d/50-startup.kdl"
-    grep -Fq 'turnstile-update-runit-env PATH INIR_VENV ILLOGICAL_IMPULSE_VIRTUAL_ENV WAYLAND_DISPLAY XDG_RUNTIME_DIR DBUS_SESSION_BUS_ADDRESS NIRI_SOCKET' "$turnstile_test_root/home/.config/niri/config.d/50-startup.kdl"
-    grep -Fq 'sv restart \"$HOME/.config/service/inir\"' "$turnstile_test_root/home/.config/niri/config.d/50-startup.kdl"
-    # Only Turnstile: its shell runs outside the session, so Niri starts the agent (the runsvdir test above asserts none).
-    grep -Fq 'spawn-sh-at-startup "for agent in /usr/libexec/polkit-gnome-authentication-agent-1' "$turnstile_test_root/home/.config/niri/config.d/50-startup.kdl"
-    for audio_svc in pipewire wireplumber pipewire-pulse; do
-        audio_run="$turnstile_test_root/home/.config/service/$audio_svc/run"
-        grep -Fq 'chpst -e "$TURNSTILE_ENV_DIR"' "$audio_run"
-    done
-    grep -Fq 'chpst -e "$TURNSTILE_ENV_DIR"' "$turnstile_test_root/home/.config/service/ydotool/run"
-    xembed_run="$turnstile_test_root/home/.config/service/inir-xembedsniproxy/run"
-    grep -Fq 'exec chpst -e "$TURNSTILE_ENV_DIR" sh -c' "$xembed_run"
-    grep -Fq '[ -n "${DISPLAY:-}" ] || exec pause' "$xembed_run"
-    ! grep -Fq '\$TURNSTILE_ENV_DIR' "$xembed_run"
-    grep -Fxq 'core_services="dbus"' "$turnstile_conf"
-    ! grep -Fq 'runsvdir' "$turnstile_test_root/home/.config/niri/config.d/50-startup.kdl"
-    cp "$turnstile_run" "$turnstile_run.before"
-    cp "$turnstile_conf" "$turnstile_conf.before"
-    cp "$turnstile_test_root/home/.config/niri/config.d/50-startup.kdl" "$turnstile_test_root/home/.config/niri/config.d/50-startup.kdl.before"
-    reconcile_inir_supervisor >/dev/null
-    cmp -s "$turnstile_run" "$turnstile_run.before"
-    cmp -s "$turnstile_conf" "$turnstile_conf.before"
-    cmp -s "$turnstile_test_root/home/.config/niri/config.d/50-startup.kdl" "$turnstile_test_root/home/.config/niri/config.d/50-startup.kdl.before"
-    [[ "$(grep -c 'BEGIN inir-turnstile-environment' "$turnstile_test_root/home/.config/niri/config.d/50-startup.kdl")" -eq 1 ]]
-    if INIR_TURNSTILE_EXAMPLES="$turnstile_test_root/missing" configure_turnstile_user_services; then
-        exit 1
-    fi
-); then
-    printf 'FAIL: active turnstile was not selected exclusively\n' >&2
-    rm -rf "$turnstile_test_root"
-    exit 1
-fi
-
-polkit_service="$runtime_root/services/PolkitService.qml"
-if ! grep -Fq '"polkit-mate-authentication-agent-1"' "$polkit_service" \
-        || ! grep -Fq '"lxpolkit"' "$polkit_service"; then
-    printf 'FAIL: shell polkit fallback does not recognize all installer-supported external agents\n' >&2
-    exit 1
-fi
-rm -rf "$turnstile_test_root"
-
-step "Void dependency profile"
-bash "$runtime_root/scripts/test-void-release-profile.sh"
-bash "$runtime_root/scripts/test-void-warp-extra.sh"
-for warp_toggle in \
-        "$runtime_root/modules/common/models/quickToggles/CloudflareWarpToggle.qml" \
-        "$runtime_root/modules/sidebarRight/quickToggles/androidStyle/AndroidCloudflareWarpToggle.qml" \
-        "$runtime_root/modules/sidebarRight/quickToggles/classicStyle/CloudflareWarp.qml"; do
-    for needle in \
-            'function beginTransitionPoll(expectedConnected: bool): void' \
-            'property int _transitionPollsRemaining: 0' \
-            'interval: 500' \
-            'root.beginTransitionPoll(true)' \
-            'root.beginTransitionPoll(false)'; do
-        if ! grep -Fq "$needle" "$warp_toggle"; then
-            printf 'FAIL: WARP toggle lacks bounded transition polling (%s): %s\n' "$needle" "$warp_toggle" >&2
-            exit 1
-        fi
-    done
-done
-bash "$runtime_root/scripts/test-void-graphics-preflight.sh"
-python3 "$runtime_root/scripts/test-detect-sensors.py"
-void_deps="$runtime_root/sdata/dist-void/install-deps.sh"
-deps_map="$runtime_root/sdata/lib/deps-map.sh"
-doctor_lib="$runtime_root/sdata/lib/doctor.sh"
-deps_router="$runtime_root/sdata/subcmd-install/1.deps-router.sh"
-void_greeting="$runtime_root/sdata/subcmd-install/0.greeting.sh"
-installer_conflicts="$runtime_root/sdata/lib/conflicts.sh"
-runtime_conflict_killer="$runtime_root/services/ConflictKiller.qml"
-ocr_checker="$runtime_root/scripts/check-void-ocr.sh"
-if ! grep -Eq '^[[:space:]]*arch\|fedora\|debian\|ubuntu\|void\)' "$void_greeting"; then
-    printf 'FAIL: Void still falls through to the generic compatibility warning\n' >&2
-    exit 1
-fi
-if ! grep -Fq 'scripts/check-void-release-profile.sh' "$deps_router" \
-        || ! grep -Fq 'scripts/check-void-graphics.sh' "$deps_router"; then
-    printf 'FAIL: Void install path does not run release-profile + graphics preflights before dependency provisioning\n' >&2
-    exit 1
-fi
-void_doc="$runtime_root/docs/VOID.md"
-if grep -Fq 'Niri runs on it (slow but functional)' "$void_doc" \
-        || ! grep -Fq 'VIRTIO_GPU_F_VIRGL' "$void_doc"; then
-    printf 'FAIL: Void VM docs still advertise lavapipe/software rendering as a supported Niri path\n' >&2
-    exit 1
-fi
-if ! grep -Fq 'check_graphics_stack' "$doctor_lib" \
-        || ! grep -Fq 'scripts/check-void-graphics.sh' "$doctor_lib"; then
-    printf 'FAIL: Doctor does not expose the Void graphics preflight\n' >&2
-    exit 1
-fi
-if grep -Fq 'conflict_map["dunst"]=' "$installer_conflicts"; then
-    printf 'FAIL: installer treats the dunst client package as a runtime daemon conflict\n' >&2
-    exit 1
-fi
-if ! grep -Fq 'killall", "mako", "dunst"' "$runtime_conflict_killer"; then
-    printf 'FAIL: runtime conflict handling no longer covers an active dunst daemon\n' >&2
-    exit 1
-fi
-if ! grep -Fq 'XDG_BIN_HOME' "$ocr_checker"; then
-    printf 'FAIL: Void OCR checker does not expose the user-local tesseract adapter on PATH\n' >&2
-    exit 1
-fi
-mod_q_default="$runtime_root/defaults/niri/config.d/70-binds.kdl"
-mod_q_legacy="$runtime_root/dots/.config/niri/config.kdl"
-mod_q_migration="$runtime_root/sdata/migrations/006-close-confirm.sh"
-for source in "$mod_q_default" "$mod_q_legacy" "$mod_q_migration"; do
-    if ! grep -Fq 'Mod+Q repeat=false allow-inhibiting=false' "$source"; then
-        printf 'FAIL: Mod+Q can still be inhibited after config regeneration: %s\n' "$source" >&2
-        exit 1
-    fi
-done
-void_icon="$runtime_root/assets/icons/void-symbolic.svg"
-system_info="$runtime_root/services/SystemInfo.qml"
-if [[ ! -s "$void_icon" ]] \
-        || ! grep -Fq 'case "void": distroIcon = "void-symbolic"; break;' "$system_info"; then
-    printf 'FAIL: Void distro identity still falls back to the generic Linux icon\n' >&2
-    exit 1
-fi
-if ! grep -Eq '^[[:space:]]+kf6-syntax-highlighting$' <<< "$(sed -n '/^VOID_BASE_PACKAGES=(/,/^)/p' "$void_deps")"; then
-    printf 'FAIL: Void base profile is missing the critical QML syntax-highlighting runtime\n' >&2
-    exit 1
-fi
-if ! grep -Eq '^[[:space:]]+wlsunset$' <<< "$(sed -n '/^VOID_BASE_PACKAGES=(/,/^)/p' "$void_deps")"; then
-    printf 'FAIL: Void base profile is missing the Niri night-light provider\n' >&2
-    exit 1
-fi
-void_base_block="$(sed -n '/^VOID_BASE_PACKAGES=(/,/^)/p' "$void_deps")"
-void_audio_block="$(sed -n '/^VOID_AUDIO_PACKAGES=(/,/^)/p' "$void_deps")"
-void_toolkit_block="$(sed -n '/^VOID_TOOLKIT_PACKAGES=(/,/^)/p' "$void_deps")"
-void_fonts_block="$(sed -n '/^VOID_FONTS_PACKAGES=(/,/^)/p' "$void_deps")"
-void_ocr_block="$(sed -n '/^VOID_OCR_PACKAGES=(/,/^)/p' "$void_deps")"
-void_extras="$runtime_root/sdata/lib/extras.sh"
-if grep -Fq 'warp-cli:cloudflare-warp' "$doctor_lib" \
-        || grep -Fq 'install_void_warp' "$void_deps" \
-        || grep -Fq 'configure_void_warp_service || return 1' "$runtime_root/sdata/subcmd-install/2.setups.sh"; then
-    printf 'FAIL: Cloudflare WARP is still a mandatory Void dependency/provider\n' >&2
-    exit 1
-fi
-for needle in \
-    'extras_install_void_warp()' \
-    'extras_refresh_void_warp_on_update()' \
-    'INIR_WARP_PACKAGES_URL=' \
-    'extras_version_ge' \
-    "Cloudflare WARP's official Linux binary is glibc-only"; do
-    if ! grep -Fq "$needle" "$void_extras"; then
-        printf 'FAIL: Void WARP optional-extra contract missing: %s\n' "$needle" >&2
-        exit 1
-    fi
-done
-if ! grep -Fq 'Install/update Cloudflare WARP' "$runtime_root/setup" \
-        || ! grep -Fq 'if [[ "${OS_GROUP_ID:-}" == void ]]' "$runtime_root/setup" \
-        || ! grep -Fq 'extras_refresh_void_warp_on_update' "$runtime_root/setup"; then
-    printf 'FAIL: setup does not expose/refresh the Void-only WARP extra correctly\n' >&2
-    exit 1
-fi
-for pkg in curl wget git ripgrep bc xdg-utils xdg-user-dirs libnotify xwayland-satellite xdg-desktop-portal-gnome gnome-keyring libsecret nautilus kitty kf6-kirigami kdialog breeze-icons qt6ct polkit-gnome power-profiles-daemon qt6-webengine layer-shell-qt; do
-    if ! grep -Eq "^[[:space:]]+$pkg$" <<< "$void_base_block"; then
-        printf 'FAIL: Void base profile is missing required default/runtime provider %s\n' "$pkg" >&2
-        exit 1
-    fi
-done
-web_wallpaper_service="$runtime_root/services/WebWallpaper.qml"
-web_wallpaper_host="$runtime_root/modules/background/WebWallpaperHost.qml"
-for needle in \
-    'command -v qml6 || command -v qml' \
-    '/usr/lib/qt6/bin/qml' \
-    '"--", "--probe"' \
-    '"--screen", screenScope.screenName'; do
-    if ! grep -Fq "$needle" "$web_wallpaper_service"; then
-        printf 'FAIL: Web Wallpaper lacks the Qt QML runner/provider contract: %s\n' "$needle" >&2
-        exit 1
-    fi
-done
-if grep -Fq 'import Quickshell' "$web_wallpaper_host" \
-        || grep -Fq 'Quickshell.env(' "$web_wallpaper_host" \
-        || ! grep -Fq 'args.indexOf("--probe")' "$web_wallpaper_host"; then
-    printf 'FAIL: Web Wallpaper host must be a pure Qt QML host with argv-based options\n' >&2
-    exit 1
-fi
-for pkg in fuzzel network-manager-applet; do
-    if ! grep -Eq "^[[:space:]]+$pkg$" <<< "$void_base_block"; then
-        printf 'FAIL: Void base profile is missing required shell provider %s\n' "$pkg" >&2
-        exit 1
-    fi
-done
-for pkg in songrec plasma-browser-integration lsp-plugins-lv2 libdbusmenu-gtk3 alsa-pipewire; do
-    if ! grep -Eq "^[[:space:]]+$pkg$" <<< "$void_audio_block"; then
-        printf 'FAIL: Void audio profile is missing required provider %s\n' "$pkg" >&2
-        exit 1
-    fi
-done
-if ! grep -Eq '^[[:space:]]+kde-cli-tools$' <<< "$void_fonts_block"; then
-    printf 'FAIL: Void KDE integration is missing kde-cli-tools\n' >&2
-    exit 1
-fi
-for pkg in tesseract-ocr tesseract-ocr-eng tesseract-ocr-spa tesseract-ocr-rus tesseract-ocr-jpn tesseract-ocr-chi_sim tesseract-ocr-chi_tra; do
-    if ! grep -Eq "^[[:space:]]+$pkg$" <<< "$void_ocr_block"; then
-        printf 'FAIL: shared Void OCR profile is missing %s\n' "$pkg" >&2
-        exit 1
-    fi
-done
-if ! grep -Fq 'INSTALL_TOOLKIT:-true} || ${INSTALL_SCREENCAPTURE:-true}' "$void_deps" \
-        || ! grep -Fq 'install_void_ocr_models jpn_vert chi_sim_vert chi_tra_vert' "$void_deps"; then
-    printf 'FAIL: OCR is not provisioned independently for toolkit or screencapture profiles\n' >&2
-    exit 1
-fi
-for pkg in qalculate gowall ImageMagick; do
-    if ! grep -Eq "^[[:space:]]+$pkg$" <<< "$void_toolkit_block"; then
-        printf 'FAIL: Void toolkit profile is missing required provider %s\n' "$pkg" >&2
-        exit 1
-    fi
-done
-for mapping in \
-    '[fuzzel]="fuzzel"' \
-    '[awww-daemon]="awww"' \
-    '[flock]="util-linux"' \
-    '[kwriteconfig6]="kf6-kconfig"' \
-    '[trans]="translate-shell"' \
-    '[qt-webengine]="qt6-webengine"' \
-    '[layer-shell-qt]="layer-shell-qt"' \
-    '[qalc]="qalculate"' \
-    '[gowall]="gowall"' \
-    '[nm-connection-editor]="network-manager-applet"' \
-    '[songrec]="songrec"' \
-    '[notify-send]="libnotify"' \
-    '[xdg-settings]="xdg-utils"' \
-    '[secret-tool]="libsecret"' \
-    '[gnome-keyring-daemon]="gnome-keyring"' \
-    '[powerprofilesctl]="power-profiles-daemon"'; do
-    if ! grep -Fq "$mapping" "$void_deps"; then
-        printf 'FAIL: Void selective-repair mapping missing %s\n' "$mapping" >&2
-        exit 1
-    fi
-done
-if ! grep -Fq 'check_void_install_space' "$void_deps"; then
-    printf 'FAIL: Void installer lacks a preflight for selected-profile disk space\n' >&2
-    exit 1
-fi
-
-void_space_fixture() (
-    set -e
-    local root
-    root="$(mktemp -d)"
-    trap 'rm -rf "$root"' EXIT
-    mkdir -p "$root/bin"
-    cat > "$root/bin/xbps-install" <<'SH'
-#!/bin/sh
-if [ "${MOCK_XBPS_EMPTY:-0}" = 1 ]; then
-    exit 0
-fi
-printf '%s\n' 'hugepkg-1.0_1 install x86_64 mock-repo 8589934592 1073741824'
-SH
-    cat > "$root/bin/df" <<'SH'
-#!/bin/sh
-printf '%s\n' 'Filesystem 1024-blocks Used Available Capacity Mounted on'
-printf 'mock 31457280 0 %s 0%% /\n' "${MOCK_AVAIL_KIB:?}"
-SH
-    chmod +x "$root/bin/xbps-install" "$root/bin/df"
-    export PATH="$root/bin:/usr/bin:/bin"
-    log_warning() { :; }
-    awk '/^check_void_install_space\(\) {/,/^}/' "$void_deps" > "$root/preflight.sh"
-    source "$root/preflight.sh"
-
-    export MOCK_AVAIL_KIB=10485760
-    if check_void_install_space hugepkg; then
-        printf 'FAIL: Void disk-space preflight accepts an undersized transaction\n' >&2
-        exit 1
-    fi
-
-    export MOCK_AVAIL_KIB=12582912
-    if ! check_void_install_space hugepkg; then
-        printf 'FAIL: Void disk-space preflight rejects a transaction with sufficient headroom\n' >&2
-        exit 1
-    fi
-
-    export MOCK_XBPS_EMPTY=1 MOCK_AVAIL_KIB=1
-    if ! check_void_install_space hugepkg; then
-        printf 'FAIL: Void disk-space preflight rejects an already-satisfied transaction\n' >&2
-        exit 1
-    fi
-)
-void_space_fixture
-
-if ! grep -Fq 'missing_cmds+=("qt-webengine")' "$doctor_lib" \
-        || ! grep -Fq 'missing_cmds+=("layer-shell-qt")' "$doctor_lib"; then
-    printf 'FAIL: Doctor cannot repair missing Web Wallpaper QML providers on Void\n' >&2
-    exit 1
-fi
-if ! grep -Fq 'command -v xbps-query' "$installer_conflicts" \
-        || ! grep -Fq 'xbps-query -p pkgver "$pkg"' "$installer_conflicts"; then
-    printf 'FAIL: installer conflict detection does not inspect installed XBPS packages\n' >&2
-    exit 1
-fi
-if ! grep -Fq 'pkg_sudo xbps-remove -R -- "$pkg"' "$installer_conflicts"; then
-    printf 'FAIL: installer cannot remove confirmed critical XBPS conflicts\n' >&2
-    exit 1
-fi
-if ! grep -Fq 'xbps-query -p pkgver "$pkg"' "$doctor_lib" \
-        || grep -Fq 'Conflicting shells (not Arch, skipped)' "$doctor_lib"; then
-    printf 'FAIL: Doctor still skips package-level conflicting shells on Void\n' >&2
-    exit 1
-fi
-if ! grep -Fq '"secret-tool:libsecret"' "$doctor_lib" \
-        || ! grep -Fq '"gnome-keyring-daemon:gnome-keyring"' "$doctor_lib" \
-        || ! grep -Fq '"powerprofilesctl:power-profiles-daemon"' "$doctor_lib" \
-        || ! grep -Fq 'sudo xbps-install -S kde-cli-tools' "$doctor_lib"; then
-    printf 'FAIL: Void Doctor does not diagnose the keyring/KDE providers installed by the profile\n' >&2
-    exit 1
-fi
-if ! grep -Fq 'ln -sfn /etc/sv/power-profiles-daemon /var/service/power-profiles-daemon' "$runtime_root/sdata/subcmd-install/2.setups.sh"; then
-    printf 'FAIL: Void power profiles provider is not activated through runit\n' >&2
-    exit 1
-fi
-if ! grep -Fq 'void:qalculate' "$deps_map"; then
-    printf 'FAIL: Void qalc dependency map points at a non-provider package\n' >&2
-    exit 1
-fi
-if ! grep -Fq 'void:nerd-fonts-ttf' "$deps_map" \
-        || grep -Fq 'void:font-jetbrains-mono-nerd' "$deps_map"; then
-    printf 'FAIL: Void JetBrains Nerd Font mapping does not use the validated nerd-fonts-ttf provider\n' >&2
-    exit 1
-fi
-
-void_migration_qt="$runtime_root/sdata/migrations/012-plasma-integration-qt-theming.sh"
-void_migration_browser="$runtime_root/sdata/migrations/029-plasma-browser-integration.sh"
-for migration in "$void_migration_qt" "$void_migration_browser"; do
-    if ! grep -Fq 'command -v xbps-install' "$migration" \
-            || ! grep -Fq 'xbps-install -S -y' "$migration"; then
-        printf 'FAIL: required migration lacks an XBPS install path: %s\n' "$migration" >&2
-        exit 1
-    fi
-done
-
-void_uninstall="$runtime_root/sdata/lib/uninstall.sh"
-if ! grep -Fq 'xbps-query -X' "$void_uninstall" \
-        || ! grep -Fq 'sudo xbps-remove -R' "$void_uninstall"; then
-    printf 'FAIL: uninstall analysis/guidance lacks Void XBPS support\n' >&2
-    exit 1
-fi
-
-package_search="$runtime_root/services/deferred/PackageSearch.qml"
-tools_view="$runtime_root/modules/sidebarLeft/ToolsView.qml"
-waffle_updates="$runtime_root/modules/waffle/bar/UpdatesButton.qml"
-software_view="$runtime_root/modules/sidebarLeft/SoftwareView.qml"
-if ! grep -Fq 'function cleanPackageCache()' "$package_search" \
-        || ! grep -Fq 'sudo xbps-remove -O' "$package_search"; then
-    printf 'FAIL: package actions lack a Void-aware cache-clean path\n' >&2
-    exit 1
-fi
-if grep -Fq 'yay -Syu' "$tools_view" || grep -Fq 'paccache -rk1' "$tools_view" \
-        || ! grep -Fq 'PackageSearch.updateSystem()' "$tools_view" \
-        || ! grep -Fq 'PackageSearch.cleanPackageCache()' "$tools_view"; then
-    printf 'FAIL: Tools view still hardcodes Arch package actions\n' >&2
-    exit 1
-fi
-# iRiS draws the battery one way (#292): the drawn mark wherever a level shows, a figure never inside a ring.
-iris_faces="$runtime_root/modules/iris/components/IrisBubbleFace.qml"
-if [[ ! -f "$runtime_root/modules/iris/components/IrisBatteryMark.qml" ]] \
-        || ! grep -Fq 'IrisBatteryMark {' "$iris_faces" \
-        || ! grep -Fq 'IrisBatteryMark {' "$runtime_root/modules/iris/bar/IrisIsland.qml" \
-        || ! grep -Fq 'IrisBatteryMark {' "$runtime_root/modules/iris/lock/IrisLockStage.qml" \
-        || ! grep -Fq 'IrisBatteryMark {' "$runtime_root/modules/iris/components/IrisNotificationIcon.qml" \
-        || grep -Eq 'id: (batteryRing|vitalsRing)' "$iris_faces" \
-        || ! grep -Fq 'readonly property bool compactCell' "$iris_faces"; then
-    printf 'FAIL: an iRiS battery surface draws a font glyph, or a bubble figure sits inside a ring\n' >&2
-    exit 1
-fi
-if ! grep -Fq 'function simulate(spec: string)' "$runtime_root/services/Battery.qml" \
-        || ! grep -Fq '!simulating && allowAutomaticSuspend' "$runtime_root/services/Battery.qml" \
-        || ! grep -Fq 'function simulateLink(spec: string)' "$runtime_root/services/Network.qml" \
-        || ! grep -Fq 'target: "bluetooth"' "$runtime_root/services/BluetoothStatus.qml"; then
-    printf 'FAIL: battery, network link and Bluetooth must be simulable, and a simulated battery never suspends\n' >&2
-    exit 1
-fi
-if ! grep -Fq 'could not check for updates' "$runtime_root/services/Updates.qml"; then
-    printf 'FAIL: a failed update check must keep the last count\n' >&2
-    exit 1
-fi
-if ! grep -Fq 'PackageSearch.runConfiguredUpdate()' "$waffle_updates" \
-        || ! grep -Fq 'PackageSearch.runConfiguredUpdate()' "$runtime_root/modules/iris/stage/IrisCardContent.qml" \
-        || ! grep -Fq 'root.updateSystem()' "$runtime_root/services/deferred/PackageSearch.qml"; then
-    printf 'FAIL: an Update now button has no package-manager-aware fallback\n' >&2
-    exit 1
-fi
-if grep -Fq '"update": "kitty -e arch-update"' "$runtime_root/defaults/config.json" \
-        || grep -Fq 'property string update: "kitty -e sudo pacman -Syu"' "$runtime_root/modules/common/Config.qml"; then
-    printf 'FAIL: fresh config still persists an Arch-only update command\n' >&2
-    exit 1
-fi
-if ! grep -Fq 'Translation.tr("Install pacman, apt, or dnf") + " / xbps"' "$software_view"; then
-    printf 'FAIL: package-manager empty state omits XBPS\n' >&2
-    exit 1
-fi
-
-void_switchwall="$runtime_root/scripts/colors/switchwall.sh"
-void_sddm_installer="$runtime_root/scripts/sddm/install-pixel-sddm.sh"
-if ! grep -Fq 'sudo xbps-install -S ffmpeg' "$void_switchwall" \
-        || ! grep -Fq 'command -v xbps-install' "$void_switchwall"; then
-    printf 'FAIL: wallpaper dependency recovery still assumes Arch on Void\n' >&2
-    exit 1
-fi
-if ! grep -Fq 'sudo xbps-install -S sddm xorg-minimal qt6-declarative qt6-qt5compat' "$void_sddm_installer"; then
-    printf 'FAIL: optional SDDM setup still gives only an Arch install hint\n' >&2
-    exit 1
-fi
-if ! grep -Fq 'sudo ln -s /etc/sv/sddm /var/service/' "$void_sddm_installer"; then
-    printf 'FAIL: optional SDDM setup lacks Void runit activation guidance\n' >&2
-    exit 1
-fi
-if ! grep -Fq 'xbps-query -p pkgver quickshell' "$runtime_root/setup" \
-        || ! grep -Fq 'xbps-query -p repository quickshell' "$runtime_root/setup"; then
-    printf 'FAIL: setup info does not report Quickshell XBPS package origin on Void\n' >&2
-    exit 1
-fi
-for checker in check-void-networkmanager.sh check-void-bluez.sh check-void-warp.sh; do
-    checker_path="$runtime_root/scripts/$checker"
-    if ! grep -Fq 'sudo -n true' "$checker_path" \
-            || ! grep -Fq 'privileged sv status skipped' "$checker_path"; then
-        printf 'FAIL: %s still treats unavailable non-interactive sudo as a provider failure\n' "$checker" >&2
-        exit 1
-    fi
-done
-if ! grep -Fq 'xbps-install -S sudo' "$runtime_root/sdata/lib/package-installers.sh"; then
-    printf 'FAIL: privilege recovery instructions still lack a Void sudo path\n' >&2
-    exit 1
-fi
-if ! grep -Fq 'void) echo -e "    ${STY_FAINT}Run: ./setup install' "$doctor_lib"; then
-    printf 'FAIL: Void Doctor theming repair hints still fall through to generic instructions\n' >&2
-    exit 1
-fi
-if grep -Fq 'Stopped conflicting: ${running[*]} (iNiR has built-in notifications, re-enable with: systemctl --user enable <service>)' "$doctor_lib"; then
-    printf 'FAIL: non-systemd Doctor still prints a systemd-only notification recovery hint\n' >&2
-    exit 1
-fi
-
-void_setups="$runtime_root/sdata/subcmd-install/2.setups.sh"
-for needle in \
-    'supervisor="$(inir_supervisor)"' \
-    'service/inir-super-overview' \
-    'exec chpst -e "$TURNSTILE_ENV_DIR"' \
-    '# Managed by iNiR.'; do
-    if ! grep -Fq "$needle" "$void_setups"; then
-        printf 'FAIL: legacy Super-tap opt-in lacks non-systemd supervisor parity: %s\n' "$needle" >&2
-        exit 1
-    fi
-done
-if ! grep -Fq 'inir_super_overview_daemon.py' "$void_setups" \
-        || ! grep -Fq 'inir-super-overview.service' "$void_setups"; then
-    printf 'FAIL: Super-tap cleanup does not cover the current installed names\n' >&2
-    exit 1
-fi
-void_uninstall="$runtime_root/sdata/lib/uninstall.sh"
-for path in \
-    'service/inir"]="iNiR runit user service"' \
-    'service/inir-xembedsniproxy"]="iNiR XEmbed runit service"' \
-    'service/inir-super-overview"]="iNiR Super-tap runit service"'; do
-    if ! grep -Fq "$path" "$void_uninstall"; then
-        printf 'FAIL: uninstall does not own the non-systemd service path: %s\n' "$path" >&2
-        exit 1
-    fi
-done
-if ! grep -Fq 'sv down "$user_service_root/$service_dir"' "$void_uninstall"; then
-    printf 'FAIL: uninstall does not stop runit services before killing Quickshell\n' >&2
-    exit 1
-fi
-
-super_daemon_fixture() (
-    set -e
-    local supervisor="$1"
-    export INIR_TEST_SUPERVISOR="$supervisor"
-    local root
-    root="$(mktemp -d)"
-    trap 'rm -rf "$root"' EXIT
-    export HOME="$root/home"
-    export XDG_CONFIG_HOME="$HOME/.config"
-    export REPO_ROOT="$runtime_root"
-    mkdir -p "$HOME/.local/bin" "$XDG_CONFIG_HOME"
-    x() { "$@"; }
-    v() { "$@"; }
-    tui_info() { :; }
-    log_success() { :; }
-    inir_supervisor() { printf '%s\n' "$INIR_TEST_SUPERVISOR"; }
-    awk '/^function setup_super_daemon\(\)/,/^}/' "$void_setups" > "$root/setup-super.sh"
-    source "$root/setup-super.sh"
-    setup_super_daemon
-    runfile="$XDG_CONFIG_HOME/service/inir-super-overview/run"
-    [[ -x "$runfile" ]]
-    grep -Fq '# Managed by iNiR.' "$runfile"
-    grep -Fq 'inir_super_overview_daemon.py' "$runfile"
-    if [[ "$supervisor" == turnstile ]]; then
-        grep -Fq 'exec chpst -e "$TURNSTILE_ENV_DIR"' "$runfile"
-    else
-        ! grep -Fq 'chpst -e "$TURNSTILE_ENV_DIR"' "$runfile"
-    fi
-)
-super_daemon_fixture runsvdir
-super_daemon_fixture turnstile
-for mapping in 'void:pipewire' 'void:fish-shell' 'void:kf6-kconfig'; do
-    if ! grep -Fq "$mapping" "$deps_map"; then
-        printf 'FAIL: Void dependency map missing %s\n' "$mapping" >&2
-        exit 1
-    fi
-done
-for pkg in rsync base-devel pkg-config cairo-devel python3-devel glib-devel gobject-introspection python3-gobject-devel libffi-devel; do
-    if ! grep -q "^[[:space:]]*$pkg$" "$void_deps"; then
-        printf 'FAIL: Void base packages missing %s\n' "$pkg" >&2
-        exit 1
-    fi
-done
-if ! grep -q 'ONLY_MISSING_DEPS' "$void_deps"; then
-    printf 'FAIL: Void installer missing ONLY_MISSING_DEPS handling\n' >&2
-    exit 1
-fi
-if ! grep -Fq 'local dependency_repair_only=false' "$runtime_root/setup" \
-        || ! grep -Fq '[[ -n "${ONLY_MISSING_DEPS:-}" ]] && dependency_repair_only=true' "$runtime_root/setup" \
-        || ! grep -Fq 'if $dependency_repair_only; then' "$runtime_root/setup"; then
-    printf 'FAIL: targeted dependency/provider repairs can overwrite install source tracking\n' >&2
-    exit 1
-fi
-if ! grep -Fq 'reboot_cmd="loginctl reboot"' "$runtime_root/setup"; then
-    printf 'FAIL: Void install completion still assumes systemctl for reboot\n' >&2
-    exit 1
-fi
-
-step "Void Quickshell ABI repair"
-inir_cli="$runtime_root/scripts/inir"
-doctor_lib="$runtime_root/sdata/lib/doctor.sh"
-if ! grep -Fq 'void-xbps:quickshell' "$inir_cli" \
-        || ! grep -Fq "void-xbps)" "$inir_cli" \
-        || ! grep -Fq "sudo xbps-install -Sf" "$inir_cli"; then
-    printf 'FAIL: inir doctor --fix-abi has no Void XBPS repair path\n' >&2
-    exit 1
-fi
-# scripts/inir owns the rebuild; Doctor and the Arch installer hand it over instead of keeping recipes.
-if ! grep -Fq 'doctor --fix-abi && _doctor_abi_detect' "$doctor_lib" \
-        || grep -Fq '_doctor_abi_rebuild_cmd' "$doctor_lib" \
-        || ! grep -Fq 'bash ./scripts/inir "${qs_fix_args[@]}"' "$runtime_root/sdata/dist-arch/install-deps.sh"; then
-    printf 'FAIL: setup Doctor or the Arch installer keeps its own Quickshell rebuild instead of inir doctor --fix-abi\n' >&2
-    exit 1
-fi
-
-step "turnstile profile contracts"
-if ! grep -Fq 'manage_rundir = no' "$runtime_root/sdata/subcmd-install/2.setups.sh"; then
-    printf 'FAIL: Void setup does not configure turnstile for elogind\n' >&2
-    exit 1
-fi
-if ! grep -Fq "if elevate sh -c" "$runtime_root/sdata/subcmd-install/2.setups.sh"; then
-    printf 'FAIL: Void service setup does not fail on elevation errors\n' >&2
-    exit 1
-fi
-if ! grep -Fq 'turnstile-ready/conf' "$runtime_root/sdata/lib/functions.sh"; then
-    printf 'FAIL: Void setup does not configure turnstile-ready core services\n' >&2
-    exit 1
-fi
-if ! grep -Fq 'Could not configure the iNiR supervisor' "$runtime_root/sdata/subcmd-install/3.files.sh"; then
-    printf 'FAIL: file installation does not propagate supervisor setup failures\n' >&2
-    exit 1
-fi
-
-step "Void SDDM provider"
-void_functions="$runtime_root/sdata/lib/functions.sh"
-void_base_packages="$(sed -n '/^VOID_BASE_PACKAGES=(/,/^)/p' "$void_deps")"
-if ! grep -Eq '^[[:space:]]+sddm$' <<< "$void_base_packages" \
-        || ! grep -Eq '^[[:space:]]+xorg-minimal$' <<< "$void_base_packages"; then
-    printf 'FAIL: Void base profile does not install the SDDM graphical-login provider\n' >&2
-    exit 1
-fi
-
-sddm_test_root="$(mktemp -d)"
-mkdir -p "$sddm_test_root/bin" "$sddm_test_root/etc/sv/sddm" "$sddm_test_root/etc/sv/dbus" \
-    "$sddm_test_root/usr/share/wayland-sessions" "$sddm_test_root/var/service"
-cat > "$sddm_test_root/bin/sv" <<'EOF'
-#!/usr/bin/env sh
-if [ "$1" = status ]; then
-    printf 'run: %s: (pid 123) 1s\n' "$2"
-    exit 0
-fi
-exit 0
-EOF
-chmod +x "$sddm_test_root/bin/sv"
-printf '%s\n' '[Desktop Entry]' 'Name=Niri' 'Exec=/usr/bin/niri --session' \
-    > "$sddm_test_root/usr/share/wayland-sessions/niri.desktop"
-ln -s "$sddm_test_root/etc/sv/dbus" "$sddm_test_root/var/service/dbus"
-if ! (
-    set -euo pipefail
-    source "$void_functions"
-    export OS_GROUP_ID=void
-    export ask=true
-    export INIR_SDDM_SERVICE_DIR="$sddm_test_root/etc/sv/sddm"
-    export INIR_RUNIT_SERVICE_ROOT="$sddm_test_root/var/service"
-    export INIR_NIRI_SESSION_ENTRY="$sddm_test_root/usr/share/wayland-sessions/niri.desktop"
-    export PATH="$sddm_test_root/bin:$PATH"
-    log_info() { :; }
-    log_success() { :; }
-    log_warning() { :; }
-    tui_confirm() { [[ "$1" == "Enable SDDM display manager?" && "$2" == "yes" ]]; }
-    elevate() { "$@"; }
-
-    configure_void_sddm_service
-    test -L "$INIR_RUNIT_SERVICE_ROOT/sddm"
-    test "$(readlink "$INIR_RUNIT_SERVICE_ROOT/sddm")" = "$INIR_SDDM_SERVICE_DIR"
-
-    tui_confirm() { return 1; }
-    configure_void_sddm_service
-); then
-    rm -rf "$sddm_test_root"
-    printf 'FAIL: Void SDDM provider does not enable the runit service idempotently\n' >&2
-    exit 1
-fi
-
-rm -f "$sddm_test_root/var/service/sddm"
-if ! (
-    set -euo pipefail
-    source "$void_functions"
-    export OS_GROUP_ID=void
-    export ask=false
-    export assume_yes=true
-    export INIR_SDDM_SERVICE_DIR="$sddm_test_root/etc/sv/sddm"
-    export INIR_RUNIT_SERVICE_ROOT="$sddm_test_root/var/service"
-    export INIR_NIRI_SESSION_ENTRY="$sddm_test_root/usr/share/wayland-sessions/niri.desktop"
-    export PATH="$sddm_test_root/bin:$PATH"
-    log_info() { :; }
-    log_success() { :; }
-    log_warning() { :; }
-    tui_confirm() { return 1; }
-    elevate() { "$@"; }
-
-    configure_void_sddm_service
-    test -L "$INIR_RUNIT_SERVICE_ROOT/sddm"
-); then
-    rm -rf "$sddm_test_root"
-    printf 'FAIL: explicit --yes does not auto-enable the Void SDDM provider\n' >&2
-    exit 1
-fi
-
-rm -f "$sddm_test_root/var/service/sddm"
-if ! (
-    set -euo pipefail
-    source "$void_functions"
-    export OS_GROUP_ID=void
-    export ask=false
-    export assume_yes=false
-    export INIR_SDDM_SERVICE_DIR="$sddm_test_root/etc/sv/sddm"
-    export INIR_RUNIT_SERVICE_ROOT="$sddm_test_root/var/service"
-    export INIR_NIRI_SESSION_ENTRY="$sddm_test_root/usr/share/wayland-sessions/niri.desktop"
-    export PATH="$sddm_test_root/bin:$PATH"
-    log_info() { :; }
-    log_success() { :; }
-    log_warning() { :; }
-    tui_confirm() { return 1; }
-    elevate() { "$@"; }
-
-    configure_void_sddm_service
-    test ! -e "$INIR_RUNIT_SERVICE_ROOT/sddm"
-); then
-    rm -rf "$sddm_test_root"
-    printf 'FAIL: implicit non-interactive mode unexpectedly enables SDDM\n' >&2
-    exit 1
-fi
-
-rm -f "$sddm_test_root/var/service/sddm"
-mkdir -p "$sddm_test_root/etc/sv/lightdm"
-ln -s "$sddm_test_root/etc/sv/lightdm" "$sddm_test_root/var/service/lightdm"
-if ! (
-    set -euo pipefail
-    source "$void_functions"
-    export OS_GROUP_ID=void
-    export ask=true
-    export INIR_SDDM_SERVICE_DIR="$sddm_test_root/etc/sv/sddm"
-    export INIR_RUNIT_SERVICE_ROOT="$sddm_test_root/var/service"
-    export INIR_NIRI_SESSION_ENTRY="$sddm_test_root/usr/share/wayland-sessions/niri.desktop"
-    export PATH="$sddm_test_root/bin:$PATH"
-    log_info() { :; }
-    log_success() { :; }
-    log_warning() { :; }
-    tui_confirm() { return 0; }
-    elevate() { "$@"; }
-
-    configure_void_sddm_service
-    test ! -e "$INIR_RUNIT_SERVICE_ROOT/sddm"
-); then
-    rm -rf "$sddm_test_root"
-    printf 'FAIL: Void SDDM provider overwrites a competing display manager\n' >&2
-    exit 1
-fi
-rm -rf "$sddm_test_root"
-
-# The D-Bus socket is authoritative when unprivileged `sv status` is unreadable.
-sddm_socket_root="$(mktemp -d)"
-mkdir -p "$sddm_socket_root/bin" "$sddm_socket_root/etc/sv/sddm" \
-    "$sddm_socket_root/etc/sv/dbus" "$sddm_socket_root/usr/share/wayland-sessions" \
-    "$sddm_socket_root/var/service"
-printf '%s\n' '[Desktop Entry]' 'Name=Niri' 'Exec=/usr/bin/niri --session' \
-    > "$sddm_socket_root/usr/share/wayland-sessions/niri.desktop"
-ln -s "$sddm_socket_root/etc/sv/dbus" "$sddm_socket_root/var/service/dbus"
-cat > "$sddm_socket_root/bin/sv" <<'EOF'
-#!/usr/bin/env sh
-printf 'warning: %s: unable to open supervise/ok: access denied\n' "$2" >&2
-exit 1
-EOF
-chmod +x "$sddm_socket_root/bin/sv"
-python3 -c 'import socket,sys,time; s=socket.socket(socket.AF_UNIX); s.bind(sys.argv[1]); s.listen(1); time.sleep(30)' \
-    "$sddm_socket_root/system_bus_socket" &
-sddm_socket_pid=$!
-for _ in 1 2 3 4 5; do
-    [[ -S "$sddm_socket_root/system_bus_socket" ]] && break
-    sleep 0.1
-done
-if ! (
-    set -euo pipefail
-    source "$void_functions"
-    export OS_GROUP_ID=void
-    export ask=true
-    export INIR_SDDM_SERVICE_DIR="$sddm_socket_root/etc/sv/sddm"
-    export INIR_RUNIT_SERVICE_ROOT="$sddm_socket_root/var/service"
-    export INIR_NIRI_SESSION_ENTRY="$sddm_socket_root/usr/share/wayland-sessions/niri.desktop"
-    export INIR_DBUS_SYSTEM_SOCKET="$sddm_socket_root/system_bus_socket"
-    export PATH="$sddm_socket_root/bin:$PATH"
-    log_info() { :; }
-    log_success() { :; }
-    log_warning() { :; }
-    tui_confirm() { return 0; }
-    elevate() { "$@"; }
-    configure_void_sddm_service
-    test -L "$INIR_RUNIT_SERVICE_ROOT/sddm"
-); then
-    kill "$sddm_socket_pid" 2>/dev/null || true
-    wait "$sddm_socket_pid" 2>/dev/null || true
-    rm -rf "$sddm_socket_root"
-    printf 'FAIL: Void SDDM provider rejects live D-Bus when sv status is inaccessible\n' >&2
-    exit 1
-fi
-kill "$sddm_socket_pid" 2>/dev/null || true
-wait "$sddm_socket_pid" 2>/dev/null || true
-rm -rf "$sddm_socket_root"
-
-if ! grep -Fq 'configure_void_sddm_service' "$runtime_root/setup"; then
-    printf 'FAIL: setup does not offer the Void SDDM provider after installation\n' >&2
-    exit 1
-fi
-
-step "Void NetworkManager provider"
-void_setups="$runtime_root/sdata/subcmd-install/2.setups.sh"
-if ! grep -Fq 'configure_void_networkmanager_service' "$runtime_root/setup" \
-        || ! grep -Fq 'video,i2c,input,network' "$void_setups" \
-        || ! grep -Eq '^[[:space:]]+NetworkManager$' "$void_deps"; then
-    printf 'FAIL: Void NetworkManager provider is incomplete\n' >&2
-    exit 1
-fi
-
-nm_test_root="$(mktemp -d)"
-mkdir -p "$nm_test_root/etc/sv/NetworkManager" "$nm_test_root/etc/sv/dhcpcd" \
-    "$nm_test_root/etc/sv/wpa_supplicant" "$nm_test_root/var/service"
-ln -s "$nm_test_root/etc/sv/dhcpcd" "$nm_test_root/var/service/dhcpcd"
-ln -s "$nm_test_root/etc/sv/wpa_supplicant" "$nm_test_root/var/service/wpa_supplicant"
-if ! (
-    set -euo pipefail
-    source "$void_functions"
-    export OS_GROUP_ID=void
-    export ask=true
-    export INIR_NETWORKMANAGER_SERVICE_DIR="$nm_test_root/etc/sv/NetworkManager"
-    export INIR_RUNIT_SERVICE_ROOT="$nm_test_root/var/service"
-    log_info() { :; }
-    log_success() { :; }
-    log_warning() { :; }
-    tui_confirm() {
-        [[ "$1" == "Replace enabled dhcpcd/wpa_supplicant/wicd services with NetworkManager?" && "$2" == "yes" ]]
-    }
-    elevate() { "$@"; }
-
-    configure_void_networkmanager_service
-    test -L "$INIR_RUNIT_SERVICE_ROOT/NetworkManager"
-    test "$(readlink "$INIR_RUNIT_SERVICE_ROOT/NetworkManager")" = "$INIR_NETWORKMANAGER_SERVICE_DIR"
-    test ! -e "$INIR_RUNIT_SERVICE_ROOT/dhcpcd"
-    test ! -e "$INIR_RUNIT_SERVICE_ROOT/wpa_supplicant"
-
-    tui_confirm() { return 1; }
-    configure_void_networkmanager_service
-); then
-    rm -rf "$nm_test_root"
-    printf 'FAIL: Void NetworkManager provider does not migrate competing runit services idempotently\n' >&2
-    exit 1
-fi
-rm -rf "$nm_test_root"
-
-nm_auto_yes_root="$(mktemp -d)"
-mkdir -p "$nm_auto_yes_root/etc/sv/NetworkManager" "$nm_auto_yes_root/var/service"
-if ! (
-    set -euo pipefail
-    source "$void_functions"
-    export OS_GROUP_ID=void
-    export ask=false
-    export assume_yes=true
-    export INIR_NETWORKMANAGER_SERVICE_DIR="$nm_auto_yes_root/etc/sv/NetworkManager"
-    export INIR_RUNIT_SERVICE_ROOT="$nm_auto_yes_root/var/service"
-    log_info() { :; }
-    log_success() { :; }
-    log_warning() { :; }
-    tui_confirm() { return 1; }
-    elevate() { "$@"; }
-
-    configure_void_networkmanager_service
-    test -L "$INIR_RUNIT_SERVICE_ROOT/NetworkManager"
-); then
-    rm -rf "$nm_auto_yes_root"
-    printf 'FAIL: explicit --yes does not auto-enable the Void NetworkManager provider\n' >&2
-    exit 1
-fi
-rm -rf "$nm_auto_yes_root"
-
-nm_noninteractive_root="$(mktemp -d)"
-mkdir -p "$nm_noninteractive_root/etc/sv/NetworkManager" "$nm_noninteractive_root/var/service"
-if ! (
-    set -euo pipefail
-    source "$void_functions"
-    export OS_GROUP_ID=void
-    export ask=false
-    export assume_yes=false
-    export INIR_NETWORKMANAGER_SERVICE_DIR="$nm_noninteractive_root/etc/sv/NetworkManager"
-    export INIR_RUNIT_SERVICE_ROOT="$nm_noninteractive_root/var/service"
-    log_info() { :; }
-    log_success() { :; }
-    log_warning() { :; }
-    tui_confirm() { return 1; }
-    elevate() { "$@"; }
-
-    configure_void_networkmanager_service
-    test ! -e "$INIR_RUNIT_SERVICE_ROOT/NetworkManager"
-); then
-    rm -rf "$nm_noninteractive_root"
-    printf 'FAIL: implicit non-interactive mode unexpectedly enables NetworkManager\n' >&2
-    exit 1
-fi
-rm -rf "$nm_noninteractive_root"
-
-if ! grep -Fq 'assume_yes=true' "$runtime_root/setup" \
-        || ! grep -Fq 'assume_yes' "$runtime_root/sdata/subcmd-install/2.setups.sh"; then
-    printf 'FAIL: setup --yes is not wired into Void system-service activation\n' >&2
-    exit 1
-fi
-
-nm_rollback_root="$(mktemp -d)"
-mkdir -p "$nm_rollback_root/etc/sv/NetworkManager" "$nm_rollback_root/etc/sv/dhcpcd" \
-    "$nm_rollback_root/etc/sv/wpa_supplicant" "$nm_rollback_root/var/service"
-ln -s "$nm_rollback_root/etc/sv/dhcpcd" "$nm_rollback_root/var/service/dhcpcd"
-ln -s "$nm_rollback_root/etc/sv/wpa_supplicant" "$nm_rollback_root/var/service/wpa_supplicant"
-if ! (
-    set -euo pipefail
-    source "$void_functions"
-    export OS_GROUP_ID=void
-    export ask=true
-    export INIR_NETWORKMANAGER_SERVICE_DIR="$nm_rollback_root/etc/sv/NetworkManager"
-    export INIR_RUNIT_SERVICE_ROOT="$nm_rollback_root/var/service"
-    log_info() { :; }
-    log_success() { :; }
-    log_warning() { :; }
-    tui_confirm() { return 0; }
-    elevate() {
-        if [[ "$1" == "ln" && "${@: -1}" == "$INIR_RUNIT_SERVICE_ROOT/NetworkManager" ]]; then
-            return 1
-        fi
-        "$@"
-    }
-
-    if configure_void_networkmanager_service; then
-        exit 1
-    fi
-    test -L "$INIR_RUNIT_SERVICE_ROOT/dhcpcd"
-    test -L "$INIR_RUNIT_SERVICE_ROOT/wpa_supplicant"
-    test ! -e "$INIR_RUNIT_SERVICE_ROOT/NetworkManager"
-); then
-    rm -rf "$nm_rollback_root"
-    printf 'FAIL: Void NetworkManager migration does not roll back competitors after activation failure\n' >&2
-    exit 1
-fi
-rm -rf "$nm_rollback_root"
-
-if ! (
-    set -euo pipefail
-    source "$runtime_root/sdata/lib/doctor.sh"
-    export OS_GROUP_ID=void
-    doctor_failed=0
-    STY_FAINT=""
-    STY_RST=""
-    has_usable_systemd_user_manager() { return 1; }
-    nmcli() { return 1; }
-    doctor_pass() { :; }
-    doctor_fail() { doctor_failed=$((doctor_failed + 1)); }
-
-    check_service_unit_health
-    test "$doctor_failed" -eq 1
-); then
-    printf 'FAIL: Doctor does not detect a stopped Void NetworkManager provider\n' >&2
-    exit 1
-fi
-
-doctor_entry_chunk="$(sed -n '/^run_doctor()/,/^}/p' "$runtime_root/setup")"
-if ! grep -Fq 'detect_distro' <<<"$doctor_entry_chunk"; then
-    printf 'FAIL: setup doctor does not detect the distro before distro-specific health checks\n' >&2
-    exit 1
-fi
-
-step "Void BlueZ provider"
-void_audio_packages="$(sed -n '/^VOID_AUDIO_PACKAGES=(/,/^)/p' "$void_deps")"
-void_toolkit_packages="$(sed -n '/^VOID_TOOLKIT_PACKAGES=(/,/^)/p' "$void_deps")"
-if ! grep -Eq '^[[:space:]]+bluez$' <<< "$void_toolkit_packages" \
-        || ! grep -Eq '^[[:space:]]+blueman$' <<< "$void_toolkit_packages" \
-        || ! grep -Eq '^[[:space:]]+libspa-bluetooth$' <<< "$void_audio_packages" \
-        || ! grep -Fq '[blueman-manager]="blueman"' "$void_deps" \
-        || ! grep -Fq 'if ${INSTALL_TOOLKIT:-true}; then' "$void_setups" \
-        || ! grep -Fq 'required_groups+=",bluetooth"' "$void_setups" \
-        || ! grep -Fq 'ln -sfn /etc/sv/bluetoothd /var/service/bluetoothd' "$void_setups"; then
-    printf 'FAIL: Void BlueZ provider is incomplete\n' >&2
-    exit 1
-fi
-
-step "Void ydotool provider"
-if ! grep -Fq 'YDOTOOL_VERSION="1.0.4"' "$void_deps" \
-        || ! grep -Fq 'YDOTOOL_SOURCE_SHA256=' "$void_deps" \
-        || ! grep -Fq 'sha256sum -c -' "$void_deps" \
-        || ! grep -Fq 'install_void_ydotool' "$void_deps" \
-        || ! grep -Fq 'installed_ydotool_version' "$runtime_root/sdata/lib/doctor.sh" \
-        || ! grep -Fq 'configure_void_ydotool_uinput' "$runtime_root/setup" \
-        || ! grep -Fq 'KERNEL=="uinput", GROUP="input", MODE="0660"' "$runtime_root/sdata/lib/functions.sh" \
-        || ! grep -Fq 'reconcile_ydotool_user_service' "$runtime_root/sdata/lib/functions.sh"; then
-    printf 'FAIL: Void ydotool provider is incomplete\n' >&2
-    exit 1
-fi
-
-step "Void Mission Center provider"
-if ! grep -Fq 'install_void_missioncenter' "$void_deps" \
-        || ! grep -Fq 'io.missioncenter.MissionCenter' "$void_deps" \
-        || ! grep -Eq '^[[:space:]]+flatpak$' <<< "$void_toolkit_packages" \
-        || ! grep -Fq '[[ "$cmd" == missioncenter ]]' "$void_deps" \
-        || ! grep -Fq 'exec flatpak run io.missioncenter.MissionCenter "$@"' "$void_deps"; then
-    printf 'FAIL: Void Mission Center Flatpak provider is incomplete\n' >&2
-    exit 1
-fi
-if grep -Fq 'Mission Center installed, but $wrapper_dir is not on PATH' "$void_deps"; then
-    printf 'FAIL: Mission Center provider rejects a valid fresh install before shell PATH integration\n' >&2
-    exit 1
-fi
-
-missioncenter_fresh_fixture() (
-    set -e
-    local root
-    root="$(mktemp -d)"
-    trap 'rm -rf "$root"' EXIT
-    export HOME="$root/home"
-    export XDG_BIN_HOME="$HOME/.local/bin"
-    export PATH="$root/bin:/usr/bin:/bin"
-    mkdir -p "$root/bin" "$HOME"
-    cat > "$root/bin/flatpak" <<'SH'
-#!/bin/sh
-case "$1" in
-  remote-add|install) exit 0 ;;
-  info) exit 1 ;;
-  run) exit 0 ;;
-esac
-exit 0
-SH
-    chmod +x "$root/bin/flatpak"
-    tui_info() { :; }
-    log_success() { :; }
-    log_warning() { printf '%s\n' "$*" >&2; }
-    awk '/^install_void_missioncenter\(\) {/,/^}/' "$void_deps" > "$root/provider.sh"
-    source "$root/provider.sh"
-    install_void_missioncenter
-    [[ -x "$XDG_BIN_HOME/missioncenter" ]]
-    grep -Fq 'exec flatpak run io.missioncenter.MissionCenter "$@"' "$XDG_BIN_HOME/missioncenter"
-)
-missioncenter_fresh_fixture
-
-step "Void OCR language provider"
-void_ocr_packages="$(sed -n '/^VOID_OCR_PACKAGES=(/,/^)/p' "$void_deps")"
-for package in \
-    tesseract-ocr-rus \
-    tesseract-ocr-jpn \
-    tesseract-ocr-chi_sim \
-    tesseract-ocr-chi_tra; do
-    if ! grep -Eq "^[[:space:]]+${package}$" <<< "$void_ocr_packages"; then
-        printf 'FAIL: Void OCR profile missing package: %s\n' "$package" >&2
-        exit 1
-    fi
-done
-for mapping in \
-    '[tesseract]="tesseract-ocr"' \
-    '[ocr-eng]="tesseract-ocr-eng"' \
-    '[ocr-spa]="tesseract-ocr-spa"' \
-    '[ocr-rus]="tesseract-ocr-rus"' \
-    '[ocr-jpn]="tesseract-ocr-jpn"' \
-    '[ocr-chi-sim]="tesseract-ocr-chi_sim"' \
-    '[ocr-chi-tra]="tesseract-ocr-chi_tra"'; do
-    if ! grep -Fq "$mapping" "$void_deps"; then
-        printf 'FAIL: Void OCR repair mapping missing: %s\n' "$mapping" >&2
-        exit 1
-    fi
-done
-if ! grep -Fq 'TESSDATA_FAST_COMMIT="87416418657359cb625c412a48b6e1d6d41c29bd"' "$void_deps" \
-        || ! grep -Fq 'bf1e2640954691797e2dc14f38533e601b59ee37958698ae0f0b81dc6f09c71b' "$void_deps" \
-        || ! grep -Fq '20590de84725bab69cde93bd6e8ed360a13cc5421a7e7364ddeb93e9af53d6da' "$void_deps" \
-        || ! grep -Fq '1df02a4b210e5c217b783819538b63e9dfe6904e2b5e53b62664f1b9f7a989d0' "$void_deps" \
-        || ! grep -Fq 'install_void_ocr_models' "$void_deps" \
-        || ! grep -Fq 'configure_void_tesseract_command' "$void_deps" \
-        || ! grep -Fq 'exec tesseract-ocr "$@"' "$void_deps" \
-        || ! grep -Fq 'ocr-jpn-vert' "$void_deps" \
-        || ! grep -Fq 'ocr-chi-sim-vert' "$void_deps" \
-        || ! grep -Fq 'ocr-chi-tra-vert' "$void_deps"; then
-    printf 'FAIL: Void OCR vertical-model fallback is incomplete\n' >&2
-    exit 1
-fi
-
-step "Void visual theme providers"
-void_fonts_packages="$(sed -n '/^VOID_FONTS_PACKAGES=(/,/^)/p' "$void_deps")"
-for package in curl unzip; do
-    if ! grep -Eq "^[[:space:]]+${package}$" <<< "$void_fonts_packages"; then
-        printf 'FAIL: Void fonts/theme profile missing provider dependency: %s\n' "$package" >&2
-        exit 1
-    fi
-done
-for needle in \
-    'ADW_GTK3_VERSION="6.5"' \
-    'ADW_GTK3_SHA256="a81780fadfc432be0fc3d89c4ebb41aa28e4f032d42c36f9789c57dd10cfa41c"' \
-    'WHITESUR_ICON_VERSION="2026-09-10"' \
-    'WHITESUR_ICON_SHA256="406c9cd59705583f1754b0eaca96cc48bafda042b88ef143f16d8ae1820ecd95"' \
-    'CAPITAINE_VERSION="r5"' \
-    'CAPITAINE_SHA256="60114cf857902a9907780bdcfa995d600618cf14b37f90776565c9de7e5add6c"' \
-    'install_void_visual_providers' \
-    'capitaine-cursors-light'; do
-    if ! grep -Fq "$needle" "$void_deps"; then
-        printf 'FAIL: Void visual provider missing: %s\n' "$needle" >&2
-        exit 1
-    fi
-done
-if grep -Eq 'WhiteSur-icon-theme/(archive/refs/heads/master|releases/latest)|capitaine-cursors/releases/latest|adw-gtk3/releases/latest' "$void_deps"; then
-    printf 'FAIL: Void visual providers use an unpinned upstream URL\n' >&2
-    exit 1
-fi
-if ! grep -Fq 'local preferred_gtk_theme="adw-gtk3-dark"' "$void_setups" \
-        || ! grep -Fq 'gtk_theme="Adwaita"' "$void_setups" \
-        || ! grep -Fq 'local preferred_cursor_theme="capitaine-cursors-light"' "$void_setups" \
-        || ! grep -Fq 'cursor_theme="Adwaita"' "$void_setups" \
-        || ! grep -Fq 'gtk-theme "$gtk_theme"' "$void_setups" \
-        || ! grep -Fq 'cursor-theme "$cursor_theme"' "$void_setups"; then
-    printf 'FAIL: desktop setup can still persist unavailable Void GTK/cursor defaults\n' >&2
-    exit 1
-fi
-
-step "Void required font providers"
-if ! grep -Eq '^[[:space:]]+nerd-fonts-ttf$' <<< "$void_fonts_packages"; then
-    printf 'FAIL: Void fonts/theme profile must install nerd-fonts-ttf for JetBrainsMono Nerd Font parity\n' >&2
-    exit 1
-fi
-for needle in \
-    'MATERIAL_SYMBOLS_COMMIT="40a7a292a79d9394157e1ea24f83d52d5e17c556"' \
-    'MATERIAL_SYMBOLS_SHA256="f1472f172c0fc4a922be22972e4752ccc54fe795ed82564ab6f6b097782f2dbc"' \
-    'ROBOTO_FLEX_VERSION="3.200"' \
-    'ROBOTO_FLEX_SHA256="6b2b14e11308c7d3e8388b623cf740c46b872e7519198e0cff8062e52b75239b"' \
-    'GOOGLE_FONTS_COMMIT="a54f7446f84a1125ef6bf08baa46f3639e8905e0"' \
-    'GABARITO_SHA256="8650e2bd7747f7d74619fd7aecbcb0309e6f37b7964024f3fb15ae4833b67ca5"' \
-    'OXANIUM_SHA256="2ce01d946e1e1ffc8d7eecfffbda8623bedd63eaf811a20488c4b69af45babb0"' \
-    'install_void_font_providers'; do
-    if ! grep -Fq "$needle" "$void_deps"; then
-        printf 'FAIL: Void required font provider missing: %s\n' "$needle" >&2
-        exit 1
-    fi
-done
-if ! grep -Fq 'font-jetbrains-mono-nerd' "$void_deps" \
-        || ! grep -Fq 'font-providers' "$void_deps" \
-        || ! grep -Fq '_need_font_providers' "$void_deps"; then
-    printf 'FAIL: Void font providers do not have a selective repair path\n' >&2
-    exit 1
-fi
-if ! grep -Fq 'xbps-query -p pkgver "$_miss_pkg"' "$void_deps"; then
-    printf 'FAIL: Void selective repair still invokes sudo for already-installed XBPS packages\n' >&2
-    exit 1
-fi
-if grep -Eq 'google/(fonts|material-design-icons)/(raw|archive)/(main|master)|releases/latest/download/JetBrainsMono' "$void_deps"; then
-    printf 'FAIL: Void required font providers use an unpinned upstream URL\n' >&2
-    exit 1
-fi
-
-step "Void Darkly Qt provider"
-for package in \
-    cmake extra-cmake-modules qt6-base-devel qt6-declarative-devel \
-    kf6-kcoreaddons-devel kf6-kcmutils-devel kf6-kcolorscheme-devel \
-    kf6-kconfig-devel kf6-kguiaddons-devel kf6-ki18n-devel \
-    kf6-kiconthemes-devel kf6-kwindowsystem-devel kf6-kirigami-devel \
-    kf6-frameworkintegration-devel kf6-kdecoration-devel; do
-    if ! grep -Eq "^[[:space:]]+${package}$" <<< "$void_fonts_packages"; then
-        printf 'FAIL: Void Darkly provider dependency missing: %s\n' "$package" >&2
-        exit 1
-    fi
-done
-for needle in \
-    'DARKLY_VERSION="0.5.39"' \
-    'DARKLY_SOURCE_SHA256="5fed786f78ac3a6153e99920e722c981348c01fc781fb511371f6bfedee0f0c2"' \
-    'install_void_darkly' \
-    'void_darkly_kcm_path' \
-    '-DBUILD_QT5=OFF' \
-    '-DBUILD_QT6=ON' \
-    '-DWITH_DECORATIONS=ON' \
-    'Widgets DBus OpenGL' \
-    '/usr/lib64/qt6/plugins'; do
-    if ! grep -Fq -- "$needle" "$void_deps"; then
-        printf 'FAIL: Void Darkly provider missing contract: %s\n' "$needle" >&2
-        exit 1
-    fi
-done
-if grep -Fq -- '-DCMAKE_DISABLE_FIND_PACKAGE_Qt6Quick=TRUE' "$void_deps"; then
-    printf 'FAIL: Void Darkly provider disables Qt Quick even though kstyle requires it\n' >&2
-    exit 1
-fi
-if ! grep -Fq 'void:COMPILE:https://github.com/Bali10050/Darkly' "$deps_map"; then
-    printf 'FAIL: Void Darkly dependency map does not point at maintained upstream\n' >&2
-    exit 1
-fi
-if grep -Fq 'void:COMPILE:https://github.com/AlessioC31/darkly' "$deps_map"; then
-    printf 'FAIL: Void Darkly dependency map still points at removed upstream\n' >&2
-    exit 1
-fi
-run_install_body="$(sed -n '/^run_install() {/,/^}/p' "$runtime_root/setup")"
-if ! grep -Fq 'if ! source ./sdata/subcmd-install/1.deps-router.sh; then' <<< "$run_install_body" \
-        || ! grep -Fq 'Dependency installation failed' <<< "$run_install_body"; then
-    printf 'FAIL: install flow can report success after a dependency provider fails\n' >&2
-    exit 1
-fi
-
-step "Void desktop parity closure"
-for needle in \
-    'RUBIK_SHA256="1b3a7437ba2af80e465e773ed60c5036d1ba6ace492d89046dbcf18fb31e4e88"' \
-    'RUBIK_ITALIC_SHA256="08c6c4018a5ada8b517407b46897e46cf6ebb106853fbd3e89addb51d3b59c62"' \
-    'Rubik%5Bwght%5D.ttf' \
-    'Rubik-Italic%5Bwght%5D.ttf' \
-    '60-inir-void-font-aliases.conf' \
-    '<family>Google Sans Flex</family>' \
-    '<family>Roboto Flex</family>'; do
-    if ! grep -Fq "$needle" "$void_deps"; then
-        printf 'FAIL: Void desktop parity closure missing: %s\n' "$needle" >&2
-        exit 1
-    fi
-done
-void_files="$runtime_root/sdata/subcmd-install/3.files.sh"
-if ! grep -Fq 'xbps-query -p pkgver plasma-integration' "$void_files" \
-        || ! grep -Fq 's/QT_QPA_PLATFORMTHEME "qt6ct"/QT_QPA_PLATFORMTHEME "kde"/' "$void_files"; then
-    printf 'FAIL: Void file reconciliation cannot restore KDE platform integration\n' >&2
-    exit 1
-fi
-if ! grep -Fq 'install_file "dots/.config/fontconfig/conf.d/90-inir-shell.conf" "${XDG_CONFIG_HOME}/fontconfig/conf.d/90-inir-shell.conf"' "$void_files" \
-        || ! grep -Fq 'LEGACY_FONTCONFIG="${XDG_CONFIG_HOME}/fontconfig/fonts.conf"' "$void_files" \
-        || grep -Fq 'install_dir__sync "dots/.config/fontconfig" "${XDG_CONFIG_HOME}/fontconfig"' "$void_files"; then
-    printf 'FAIL: Fontconfig reconciliation can delete provider/user conf.d entries\n' >&2
-    exit 1
-fi
-
-migration_lib="$runtime_root/sdata/lib/migrations.sh"
-repair_lib="$runtime_root/sdata/lib/functions.sh"
-doctor_lib="$runtime_root/sdata/lib/doctor.sh"
-if ! MIGRATION_LIB="$migration_lib" bash -c '
-        source "$MIGRATION_LIB"
-        for id in \
-            001-gamemode-animation-toggle 002-backdrop-layer-rules 003-qt-theming-kde \
-            004-audio-keybinds-ipc 005-dolphin-xdg-menu 006-close-confirm \
-            007-brightness-keybinds 008-media-keybinds 009-quickshell-dbus-properties-logspam \
-            014-malloc-arena-optimization 021-systemd-single-instance \
-            022-service-compositor-wants 028-bar-modular-layout \
-            040-niri-session-environment-lifecycle; do
-            is_migration_retired "$id" || exit 1
-        done
-    ' \
-        || ! grep -Fq 'is_migration_retired "$migration_id" && return 1' "$migration_lib" \
-        || ! grep -Fq 'repair_legacy_quickshell_malloc_environment()' "$repair_lib" \
-        || ! grep -Fq 'repair_legacy_quickshell_malloc_environment' "$runtime_root/setup" \
-        || ! grep -Fq 'repair_legacy_quickshell_malloc_environment' "$doctor_lib"; then
-    printf 'FAIL: retired runtime migrations are not repaired through current owners\n' >&2
-    exit 1
-fi
-if ! grep -Fq '! -name "test-*.py"' "$doctor_lib" \
-        || ! grep -Fq '! -name "test-*.py"' "$runtime_root/setup"; then
-    printf 'FAIL: Doctor/update can turn non-command Python test modules executable\n' >&2
-    exit 1
-fi
-
-declare -A _migration_ids_seen=()
-for _migration_file in "$runtime_root"/sdata/migrations/*.sh; do
-    [[ -f "$_migration_file" ]] || continue
-    _migration_file_id="$(basename "$_migration_file" .sh)"
-    _migration_declared_id="$(sed -n 's/^MIGRATION_ID="\([^"]*\)".*/\1/p' "$_migration_file" | head -1)"
-    if [[ -z "$_migration_declared_id" || "$_migration_declared_id" != "$_migration_file_id" || -n "${_migration_ids_seen[$_migration_declared_id]:-}" ]]; then
-        printf 'FAIL: migration IDs must be unique and match their filenames (%s -> %s)\n' "$_migration_file_id" "${_migration_declared_id:-missing}" >&2
-        exit 1
-    fi
-    _migration_ids_seen["$_migration_declared_id"]=1
-done
-
-uninstall_root="$(mktemp -d)"
-mkdir -p "$uninstall_root/home/.config/kitty" "$uninstall_root/home/.config/foot" \
-    "$uninstall_root/home/.config/fish/conf.d" \
-    "$uninstall_root/home/.local/state" "$uninstall_root/home/.local/share" \
-    "$uninstall_root/home/.local/bin" "$uninstall_root/home/inir-backup/.config/kitty"
-printf '# USER ORIGINAL KITTY\n' > "$uninstall_root/home/.config/kitty/kitty.conf.old"
-printf '# iNiR kitty\ninclude current-theme.conf\n' > "$uninstall_root/home/.config/kitty/kitty.conf"
-printf '# Auto-generated by ii wallpaper theming system\n' > "$uninstall_root/home/.config/kitty/theme.conf"
-ln -s theme.conf "$uninstall_root/home/.config/kitty/current-theme.conf"
-printf '# USER ORIGINAL FOOT\n' > "$uninstall_root/home/.config/foot/foot.ini.old"
-printf '# iNiR foot\n' > "$uninstall_root/home/.config/foot/foot.ini"
-printf '# ORIGINAL USER THEME\n' > "$uninstall_root/home/inir-backup/.config/kitty/theme.conf"
-cat > "$uninstall_root/home/.bashrc" <<'EOF'
-export USER_KEEP=1
-# iNiR launcher PATH
-export PATH="$HOME/.local/bin:$PATH"
-# end iNiR launcher PATH
-# iNiR environment
-export INIR_VENV="$HOME/.local/state/quickshell/.venv"
-# end iNiR
-export USER_KEEP_TOO=1
-EOF
-printf 'set -gx PATH ~/.local/bin $PATH\n' > "$uninstall_root/home/.config/fish/conf.d/inir-path.fish"
-printf 'set -gx INIR_VENV foo\n' > "$uninstall_root/home/.config/fish/conf.d/inir-env.fish"
-if ! HOME="$uninstall_root/home" XDG_CONFIG_HOME="$uninstall_root/home/.config" \
-        XDG_STATE_HOME="$uninstall_root/home/.local/state" XDG_DATA_HOME="$uninstall_root/home/.local/share" \
-        XDG_CACHE_HOME="$uninstall_root/home/.cache" XDG_BIN_HOME="$uninstall_root/home/.local/bin" \
-        BACKUP_DIR="$uninstall_root/home/inir-backup" REPO_ROOT="$runtime_root" bash -c '
-    source "$REPO_ROOT/sdata/lib/environment-variables.sh"
-    source "$REPO_ROOT/sdata/lib/functions.sh"
-    source "$REPO_ROOT/sdata/lib/tui.sh"
-    source "$REPO_ROOT/sdata/lib/versioning.sh"
-    source "$REPO_ROOT/sdata/lib/uninstall.sh"
-    backup=$(uninstall_create_backup)
-    uninstall_restore_preinstall_configs >/dev/null
-    uninstall_remove_shell_integration >/dev/null
-    [[ "$(head -1 "$XDG_CONFIG_HOME/kitty/kitty.conf")" == "# USER ORIGINAL KITTY" ]]
-    [[ "$(head -1 "$XDG_CONFIG_HOME/foot/foot.ini")" == "# USER ORIGINAL FOOT" ]]
-    [[ "$(head -1 "$XDG_CONFIG_HOME/kitty/theme.conf")" == "# ORIGINAL USER THEME" ]]
-    [[ "$(head -1 "$backup/shared-configs/kitty/kitty.conf")" == "# iNiR kitty" ]]
-    [[ "$(head -1 "$backup/shared-configs/kitty/kitty.conf.old")" == "# USER ORIGINAL KITTY" ]]
-    grep -qx "export USER_KEEP=1" "$HOME/.bashrc"
-    grep -qx "export USER_KEEP_TOO=1" "$HOME/.bashrc"
-    ! grep -q "iNiR launcher PATH\|iNiR environment\|INIR_VENV" "$HOME/.bashrc"
-    [[ ! -e "$XDG_CONFIG_HOME/fish/conf.d/inir-path.fish" ]]
-    [[ ! -e "$XDG_CONFIG_HOME/fish/conf.d/inir-env.fish" ]]
-    grep -q "# iNiR environment" "$backup/shell-integration/.bashrc"
-'; then
-    rm -rf "$uninstall_root"
-    printf 'FAIL: uninstall does not restore exact pre-iNiR configs while preserving a safety backup\n' >&2
-    exit 1
-fi
-rm -rf "$uninstall_root"
-
-game_mode="$runtime_root/services/GameMode.qml"
-animations_default="$runtime_root/defaults/niri/config.d/60-animations.kdl"
-if ! grep -Fq '[ \\t]*off$' "$game_mode" || ! grep -Eq '^[[:space:]]*//[[:space:]]+off[[:space:]]*$' "$animations_default"; then
-    printf 'FAIL: GameMode cannot toggle the current spaced Niri animation marker\n' >&2
-    exit 1
-fi
-
-arch_install="$runtime_root/distro/arch/inir-shell-git/inir-shell-git.install"
-if grep -Fq 'systemctl --user enable --now inir.service' "$arch_install" \
-        || ! grep -Fq 'inir service enable' "$arch_install" \
-        || ! grep -Fq '~/.config/inir/config.json' "$arch_install"; then
-    printf 'FAIL: Arch package post-install guidance contradicts the Niri-owned service/config contract\n' >&2
-    exit 1
-fi
 
 step "worktree repository detection"
 for source in \

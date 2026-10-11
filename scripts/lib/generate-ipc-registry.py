@@ -22,8 +22,6 @@ QML_DIRS = [
     REPO_ROOT / "services",
     REPO_ROOT / "GlobalStates.qml",
     REPO_ROOT / "shell.qml",
-    REPO_ROOT / "ShellIiPanels.qml",
-    REPO_ROOT / "ShellWafflePanels.qml",
     REPO_ROOT / "ShellIrisPanels.qml",
 ]
 IPC_MD = REPO_ROOT / "docs" / "IPC.md"

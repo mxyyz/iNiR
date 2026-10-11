@@ -535,7 +535,7 @@ Wallpaper picker with grid, coverflow and compact launcher styles.
 | `cancelPreview` | Drop the preview and go back to the applied wallpaper |
 | `kind <name>` | Show only one kind of wallpaper in the library: `all`, `still`, `live` (videos) or `gif`. iRiS only; the filter also sits beside the search field whenever the folder holds more than one kind |
 | `move <step>` | Move the gallery's selection by that many tiles, as the arrow keys do (negative goes back); the ring and the row glide and the desktop preview follows. iRiS only, while the picker is open |
-| `browse <source> <query>` | Open the picker on a source — `library`, `wallhaven` or `live` (anime live wallpapers) — with a search, a folder to open (`~/Videos`), or `-` for none. Sources are an iRiS feature; other families just open the picker |
+| `browse <source> <query>` | Open the picker on a source — `library` — with a search, a folder to open (`~/Videos`), or `-` for none. Sources are an iRiS feature; other families just open the picker |
 | `status` | Return picker style, open surface, target monitor and selection target as JSON |
 
 ```kdl
@@ -921,7 +921,6 @@ iRiS bar and Island design. Available while the iRiS bar is enabled.
 | `orbit` | Open Orbit with a search already typed, e.g. `firefox` (empty for all the workspaces) |
 | `orbitClose` | Close Orbit |
 | `orbitCorner` | The corner each output's Orbit hot corner is on right now, as JSON (empty where Niri's own corner or the setting leaves none) |
-| `gallerySource` | Show or hide an online source in the wallpaper gallery: `wallhaven`, `live`, `konachan` or `yandere`, then `on`, `off` or `toggle`; returns the sources shown, in order |
 | `bubbleCard` | Grow a bubble's own card: `weather`, `notifications`, `sound`, `mic`, `tools` or `tray` (from the bubble showing it, else the Island), or `close` |
 | `tap` | Tap a piece the Island carries (`controls`, `sound`, `tray`, `notifications`, `weather`…) as a click would: its card or page grows from it, or says the focused screen's bar has no such piece |
 | `bubbleMenu` | Open a floating bubble's own menu — what it opens, where it rests and how to put it away — by kind (`weather`, `sound`, …) or piece id (`app:kitty`) |

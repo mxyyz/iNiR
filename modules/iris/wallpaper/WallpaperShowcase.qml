@@ -41,11 +41,6 @@ ClippingRectangle {
             fillMode: Image.PreserveAspectCrop
         }
     }
-    IrisImage {
-        anchors.fill: parent
-        visible: root.entry !== null && String(root.heldEntry?.imageUrl ?? "").length > 0 && root.heldEntry?.key !== root.key
-        source: root.heldEntry?.imageUrl ?? ""
-    }
     Loader {
         anchors.fill: parent
         active: String(root.entry?.filePath ?? "").length > 0
@@ -57,14 +52,6 @@ ClippingRectangle {
             fillMode: Image.PreserveAspectCrop
             onStatusChanged: if (status === Image.Ready) adopt.restart()
         }
-    }
-    IrisImage {
-        anchors.fill: parent
-        visible: String(root.entry?.imageUrl ?? "").length > 0
-        source: root.entry?.imageUrl ?? ""
-        opacity: status === Image.Ready ? 1 : 0
-        Behavior on opacity { NumberAnimation { duration: IrisStyle.duration(220); easing.type: IrisStyle.feedbackEasing } }
-        onStatusChanged: if (status === Image.Ready) adopt.restart()
     }
     IrisImage {
         id: sharp

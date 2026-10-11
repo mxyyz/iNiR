@@ -15,9 +15,7 @@ import qs.modules.iris.settings
 import qs.modules.iris.studio
 import qs.modules.iris.lock
 import qs.modules.iris.sidebar
-import qs.modules.iris.orbit
 import qs.modules.iris.osk
-import qs.modules.background
 import qs.modules.lock
 
 Item {
@@ -26,7 +24,7 @@ Item {
     component PanelLoader: LazyLoader {
         required property string identifier
         property bool extraCondition: true
-        readonly property bool enabledPanel: Config.ready && IrisGate.official
+        readonly property bool enabledPanel: Config.ready
             && (Config.options?.enabledPanels ?? []).includes(identifier)
             && extraCondition
         loading: enabledPanel
@@ -36,7 +34,7 @@ Item {
     component DeferredPanelLoader: LazyLoader {
         required property string identifier
         property bool extraCondition: true
-        readonly property bool enabledPanel: Config.ready && IrisGate.official
+        readonly property bool enabledPanel: Config.ready
             && (Config.options?.enabledPanels ?? []).includes(identifier)
             && extraCondition
         loading: enabledPanel && GlobalStates.shellEntryReady
@@ -55,7 +53,7 @@ Item {
             interval: loader.closeGraceMs
             onTriggered: loader.resident = loader.open
         }
-        readonly property bool enabledPanel: Config.ready && IrisGate.official
+        readonly property bool enabledPanel: Config.ready
             && (!requireEnabledPanel || (Config.options?.enabledPanels ?? []).includes(identifier))
             && extraCondition
 
@@ -74,26 +72,39 @@ Item {
 
     IrisAppsSync {}
 
-    // Orbit's hot corner: a few pixels in one screen corner, on Top, only while it is on and something can use it.
-    LazyLoader {
-        active: IrisGate.official && (Config.options?.iris?.orbit?.enable ?? false) && (Config.options?.iris?.orbit?.hotCorner ?? true)
-        component: IrisOrbitCorner {}
-    }
+    // Each side hosts either the iRiS panel or the Material sidebar (iris.sidebars.<side>.kind).
+    readonly property bool leftSidebarIris: (Config.options?.iris?.sidebars?.left?.kind ?? "iris") !== "ii"
+    readonly property bool rightSidebarIris: (Config.options?.iris?.sidebars?.right?.kind ?? "iris") !== "ii"
 
     LazyLoader {
-        active: IrisGate.official
+        active: root.leftSidebarIris
         component: IrisSidebarEdge { side: "left" }
     }
     LazyLoader {
-        active: IrisGate.official
+        active: root.rightSidebarIris
         component: IrisSidebarEdge { side: "right" }
+    }
+
+    LazyLoader {
+        readonly property bool wanted: Config.ready && !root.leftSidebarIris
+            && (Config.options?.iris?.sidebars?.left?.enable ?? true)
+        loading: wanted && GlobalStates.shellEntryReady
+        activeAsync: wanted && GlobalStates.deferredPanelsReady
+        source: "../sidebarLeft/SidebarLeft.qml"
+    }
+    LazyLoader {
+        readonly property bool wanted: Config.ready && !root.rightSidebarIris
+            && (Config.options?.iris?.sidebars?.right?.enable ?? true)
+        loading: wanted && GlobalStates.shellEntryReady
+        activeAsync: wanted && GlobalStates.deferredPanelsReady
+        source: "../sidebarRight/SidebarRight.qml"
     }
 
     OnDemandPanelLoader {
         identifier: "irisSidebarLeft"
         requireEnabledPanel: false
         open: GlobalStates.sidebarLeftOpen
-        extraCondition: Config.options?.iris?.sidebars?.left?.enable ?? true
+        extraCondition: root.leftSidebarIris && (Config.options?.iris?.sidebars?.left?.enable ?? true)
         closeGraceMs: IrisStyle.settleDuration + 80
         component: IrisSidebar { side: "left" }
     }
@@ -102,7 +113,7 @@ Item {
         identifier: "irisSidebarRight"
         requireEnabledPanel: false
         open: GlobalStates.sidebarRightOpen
-        extraCondition: Config.options?.iris?.sidebars?.right?.enable ?? true
+        extraCondition: root.rightSidebarIris && (Config.options?.iris?.sidebars?.right?.enable ?? true)
         closeGraceMs: IrisStyle.settleDuration + 80
         component: IrisSidebar { side: "right" }
     }
@@ -144,17 +155,10 @@ Item {
     }
 
     LazyLoader {
-        activeAsync: Config.ready && IrisGate.official && GlobalStates.deferredPanelsReady
+        activeAsync: Config.ready && GlobalStates.deferredPanelsReady
             && CompositorService.isNiri
             && (Config.options?.background?.backdrop?.enable ?? false)
         source: "../background/Backdrop.qml"
-    }
-
-    LazyLoader {
-        activeAsync: Config.ready && IrisGate.official && GlobalStates.deferredPanelsReady
-            && (Config.options?.enabledPanels ?? []).includes("irisBackground")
-            && (Config.options?.iris?.modules?.desktopWidgets ?? true)
-        component: Background {}
     }
 
     PanelLoader {

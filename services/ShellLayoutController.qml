@@ -60,18 +60,6 @@ Singleton {
             editableProperties: ["thickness"],
             collisionPolicy: "swap-edge",
             resetScopes: ["surface", "family"]
-        },
-        {
-            id: "waffleBar",
-            families: ["waffle"],
-            kind: "edge",
-            labelKey: "Taskbar",
-            icon: "desktop_windows",
-            layoutScope: "enabledOutputs",
-            slots: ["top", "bottom"],
-            editableProperties: [],
-            collisionPolicy: "validated",
-            resetScopes: ["surface", "family"]
         }
     ]
 
@@ -415,16 +403,6 @@ Singleton {
                 enabledOutputs: Config.options?.dock?.screenList ?? [],
                 source: "dock.position"
             }
-        case "waffleBar":
-            return {
-                ok: true,
-                id: surfaceId,
-                slot: (Config.options?.waffles?.bar?.bottom ?? true) ? "bottom" : "top",
-                scope: desc.layoutScope,
-                outputName: outputName,
-                enabledOutputs: Config.options?.waffles?.bar?.screenList ?? [],
-                source: "waffles.bar.bottom"
-            }
         default:
             return root._failure("unsupported-surface", "Surface state adapter is unavailable")
         }
@@ -496,7 +474,7 @@ Singleton {
             occupiedBy: occupiedBy,
             swapWith: occupiedBy,
             changed: !(current.ok && current.slot === slot),
-            requiresRebuild: surfaceId === "iiBar" || surfaceId === "iiDock" || surfaceId === "waffleBar"
+            requiresRebuild: surfaceId === "iiBar" || surfaceId === "iiDock"
         }
     }
 
@@ -547,9 +525,6 @@ Singleton {
             }
             break
         }
-        case "waffleBar":
-            Config.setNestedValue("waffles.bar.bottom", slot === "bottom")
-            break
         default:
             return root._failure("mutation-not-ready",
                 "Placement mutation is not available for this surface yet")
@@ -666,8 +641,6 @@ Singleton {
             result.reset = true
             return result
         }
-        case "waffleBar":
-            return root.moveSurface(surfaceId, "bottom", outputName)
         default:
             return root._failure("reset-not-ready",
                 "Reset is not available for this surface yet")

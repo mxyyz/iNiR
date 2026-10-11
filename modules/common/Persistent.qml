@@ -106,11 +106,6 @@ Singleton {
                 }
             }
 
-            property JsonObject booru: JsonObject {
-                property bool allowNsfw: false
-                property bool showTagsOnHover: true
-                property string provider: "yandere"
-            }
 
             property JsonObject idle: JsonObject {
                 property bool inhibit: false
@@ -243,7 +238,6 @@ Singleton {
             // context survive page switches and standalone-window recreation.
             property JsonObject settings: JsonObject {
                 property int iiPage: 0
-                property int wafflePage: 0
                 property int themeTab: 0
                 property string themeTag: ""
                 property string gowallFormat: "png"

@@ -21,7 +21,6 @@ import qs.modules.background.widgets.screenTime
 import qs.modules.background.widgets.dayProgress
 import qs.modules.background.widgets.worldClock
 import qs.modules.background.widgets.userCard
-import qs.modules.background.widgets.newsTicker
 import qs.modules.iris.widgets
 import qs.modules.iris.style
 
@@ -90,7 +89,7 @@ Item {
                 monthCalendar: monthWidget, calendarUpcoming: upcomingWidget, todo: todoWidget, notes: notesWidget,
                 timers: timersWidget, screenTime: screenTimeWidget, systemMonitor: vitalsWidget, battery: batteryWidget,
                 worldClock: worldClockWidget, dayProgress: dayWidget, dateBadge: dateWidget, userCard: profileWidget,
-                uptime: uptimeWidget, newsTicker: newsWidget
+                uptime: uptimeWidget
             })[slot.modelData] ?? null
         }
     }
@@ -112,5 +111,4 @@ Item {
     Component { id: dateWidget; DateBadgeWidget { visibleWhenLocked: true; outputName: root.scope; screenWidth: root.width; screenHeight: root.height; scaledScreenWidth: root.width; scaledScreenHeight: root.height; wallpaperScale: 1 } }
     Component { id: profileWidget; UserCardWidget { visibleWhenLocked: true; outputName: root.scope; screenWidth: root.width; screenHeight: root.height; scaledScreenWidth: root.width; scaledScreenHeight: root.height; wallpaperScale: 1 } }
     Component { id: uptimeWidget; UptimeWidget { visibleWhenLocked: true; outputName: root.scope; screenWidth: root.width; screenHeight: root.height; scaledScreenWidth: root.width; scaledScreenHeight: root.height; wallpaperScale: 1 } }
-    Component { id: newsWidget; NewsTickerWidget { visibleWhenLocked: true; outputName: root.scope; screenWidth: root.width; screenHeight: root.height; scaledScreenWidth: root.width; scaledScreenHeight: root.height; wallpaperScale: 1 } }
 }

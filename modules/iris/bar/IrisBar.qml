@@ -21,7 +21,6 @@ import qs.modules.iris.dock
 import qs.modules.iris.edit
 import qs.modules.iris.notificationPopup
 import qs.modules.iris.palette
-import qs.modules.iris.orbit
 import qs.modules.iris.wallpaper
 import qs.modules.iris.style
 import qs.modules.iris.components as IrisParts
@@ -152,30 +151,6 @@ Scope {
             Config.setNestedValues(updates)
             return place
         }
-        function dock(action: string): void {
-            GlobalStates.irisDockShown = action === "reveal" ? true : action === "hide" ? false : !GlobalStates.irisDockShown
-        }
-        function dockApp(appId: string, mode: string): string {
-            if (mode === "close") { GlobalStates.irisDockMenuRequest = { appId: "", mode: "close" }; GlobalStates.irisDockShown = false; return "closed" }
-            if (mode === "pin") {
-                TaskbarApps.togglePin(appId)
-                const lower = appId.toLowerCase()
-                return (Config.options?.dock?.pinnedApps ?? []).some(p => String(p).toLowerCase() === lower) ? "pinned" : "unpinned"
-            }
-            if (mode !== "windows" && mode !== "menu") return "Unknown mode: windows, menu, pin or close"
-            GlobalStates.irisDockMenuRequest = { appId: appId, mode: mode }
-            return appId
-        }
-        // `position` counts the Dock's icons from 1, the separator included: landing before it pins, after it unpins.
-        function dockMove(appId: string, position: int): string {
-            const ids = IrisDockOrder.entries.map(entry => entry.appId)
-            const id = appId.toLowerCase()
-            if (!ids.includes(id)) return "Not in the Dock: " + ids.filter(i => i !== "SEPARATOR").join(", ")
-            const rest = ids.filter(i => i !== id)
-            rest.splice(Math.max(0, Math.min(rest.length, position - 1)), 0, id)
-            if (!IrisDockOrder.drop(id, rest)) return "Stays where it was: a pinned app with no window has no place among the open ones"
-            return rest.join(" ")
-        }
         function appBubble(appId: string, place: string): string {
             if (appId.length === 0) return "Unknown app"
             if (place === "dock" || place === "off") { IrisPieces.removeApp(appId); return "docked" }
@@ -228,11 +203,6 @@ Scope {
             if (!IrisFrame.edges.includes(name)) return "Unknown edge: top, bottom, left or right"
             Config.setNestedValue("iris.bar.position", name)
             return name
-        }
-        function dockEdge(name: string): string {
-            if (name !== "auto" && !IrisFrame.edges.includes(name)) return "Unknown edge: auto, top, bottom, left or right"
-            Config.setNestedValue("iris.dock.position", name)
-            return IrisFrame.dockEdge
         }
         function zone(name: string, kinds: string): string {
             const path = ({ start: "iris.bar.fullStart", center: "iris.bar.fullCenter", end: "iris.bar.fullEnd" })[name]
@@ -309,27 +279,6 @@ Scope {
         function spotlight(query: string): void {
             GlobalStates.irisSpotlightQuery = query
             GlobalStates.searchOpen = true
-        }
-        function gallerySource(source: string, state: string): string {
-            const known = ["wallhaven", "live", "konachan", "yandere"]
-            if (!known.includes(source)) return "Unknown source: " + known.join(", ")
-            const list = Array.from(Config.options?.iris?.wallpaper?.sources ?? ["wallhaven", "live"]).map(String)
-            const on = state === "on" || (state === "toggle" && !list.includes(source))
-            if (state !== "on" && state !== "off" && state !== "toggle") return "on, off or toggle"
-            const next = list.filter(id => id !== source).concat(on ? [source] : [])
-            Config.setNestedValue("iris.wallpaper.sources", next)
-            return next.join(" ")
-        }
-        function orbit(query: string): string {
-            if (!(Config.options?.iris?.orbit?.enable ?? false)) return "Orbit is off: turn it on in Settings › Orbit or with inir iris set iris.orbit.enable true"
-            GlobalStates.irisOrbitQuery = query
-            GlobalStates.irisOrbitOpen = true
-            return "open"
-        }
-        function orbitCorner(): string { return JSON.stringify(GlobalStates.irisOrbitCorners) }
-        function orbitClose(): string {
-            GlobalStates.irisOrbitOpen = false
-            return "closed"
         }
         function spotlightClose(): string {
             GlobalStates.searchOpen = false
@@ -492,51 +441,6 @@ Scope {
             Config.setNestedValue("iris.bar.auxiliary", name)
             return String(Config.options.iris.bar.auxiliary)
         }
-        function watch(which: string): string {
-            const shows = AnimeWatch.shows ?? []
-            const query = String(which ?? "").trim()
-            if (query.length === 0) {
-                if (!AnimeWatch.available) return "No anime CLI found (install ani-cli, jerry or curd)"
-                if (AnimeWatch.busy)
-                    return AnimeWatch.busyEpisode.length > 0 ? `${AnimeWatch.phase}: episode ${AnimeWatch.busyEpisode}` : AnimeWatch.phase
-                if (shows.length === 0) return AnimeWatch.error.length > 0 ? AnimeWatch.error : "Nothing watched yet"
-                return (AnimeWatch.error.length > 0 ? `${AnimeWatch.error}\n` : "") + shows.map((show, index) => {
-                    const start = AnimeWatch.targetStartOf(show)
-                    const at = start > 0.5 ? `  ${AnimeWatch.clock(start)} in` : ""
-                    return `${index + 1}\t${show.title}\tep ${AnimeWatch.targetEpisodeOf(show)}${at}`
-                }).join("\n")
-            }
-            if (AnimeWatch.busy) return `Already ${AnimeWatch.phase}: episode ${AnimeWatch.busyEpisode}`
-            if (!AnimeWatch.canTarget)
-                return AnimeWatch.available ? `${AnimeWatch.cli} chooses what to resume` : "No anime CLI found"
-            const index = Number(query)
-            const chosen = isFinite(index) && index >= 1 && index <= shows.length
-                ? shows[index - 1]
-                : shows.find(show => String(show.title).toLowerCase().includes(query.toLowerCase()))
-            if (!chosen) {
-                AnimeWatch.search(query)
-                return `Searching: ${query}`
-            }
-            AnimeWatch.resume(chosen)
-            return `${chosen.title} · ep ${AnimeWatch.targetEpisodeOf(chosen)}`
-        }
-        function watchPick(value: string): string {
-            const query = String(value ?? "").trim()
-            if (query === "cancel") {
-                if (!AnimeWatch.running) return "Nothing to cancel"
-                AnimeWatch.cancel()
-                return "Cancelled"
-            }
-            if (!AnimeWatch.choosing) return AnimeWatch.busy ? AnimeWatch.phase : "Nothing to choose"
-            const items = AnimeWatch.pickItems
-            if (query.length === 0)
-                return items.map(item => `${AnimeWatch.pickValue(item)}\t${AnimeWatch.betweenEpisodes ? AnimeWatch.actionLabel(AnimeWatch.pickValue(item)) : AnimeWatch.pickLabel(item)}`).join("\n")
-            const found = items.find(item => AnimeWatch.pickValue(item) === query)
-                ?? items.find(item => (AnimeWatch.betweenEpisodes ? AnimeWatch.actionLabel(AnimeWatch.pickValue(item)) : AnimeWatch.pickLabel(item)).toLowerCase().includes(query.toLowerCase()))
-            if (!found) return `No option matches: ${query}`
-            AnimeWatch.choose(AnimeWatch.pickValue(found))
-            return AnimeWatch.pickLabel(found)
-        }
         function desktopAction(id: string): string {
             return IrisDesktopActions.run(id, NiriService.currentOutput || (Quickshell.screens[0]?.name ?? ""))
         }
@@ -555,33 +459,6 @@ Scope {
             menu.close ? menu.close() : (menu.active = false)
             return "closed"
         }
-        function watchSubs(command: string): string {
-            if (AnimeWatch.phase !== "playing") return "No episode playing"
-            const c = String(command ?? "").trim()
-            if (c === "size+" || c === "size-") AnimeWatch.setSubtitleScale(AnimeWatch.subtitleScale + (c === "size+" ? 10 : -10))
-            else if (c === "delay+" || c === "delay-") AnimeWatch.nudgeSubtitleDelay(c === "delay+" ? 0.1 : -0.1)
-            else if (c === "delay0") AnimeWatch.resetSubtitleDelay()
-            else if (c === "off") AnimeWatch.selectSubtitle(0)
-            else if (c.startsWith("track:")) AnimeWatch.selectSubtitle(Number(c.slice(6)) || 0)
-            else if (c.startsWith("file:")) AnimeWatch.addSubtitle(c.slice(5))
-            else if (c.length > 0) return "Use size+ size- delay+ delay- delay0 off track:<n> file:<path>"
-            return `size ${AnimeWatch.subtitleScale} %, delay ${AnimeWatch.subtitleDelay.toFixed(1)} s, track ${AnimeWatch.subtitleId}\n`
-                + AnimeWatch.subtitles.map((t, i) => `${t.id}\t${AnimeWatch.subtitleLabel(t, i)}`).join("\n")
-        }
-        function watchSeek(seconds: string): string {
-            if (AnimeWatch.phase !== "playing") return "No episode playing"
-            const value = Number(seconds)
-            if (!isFinite(value) || value === 0) return "Seconds, e.g. 85 or -10"
-            AnimeWatch.seekBy(value)
-            return String(value)
-        }
-        function watchSkip(direction: string): string {
-            const wanted = String(direction ?? "").trim() || "next"
-            if (wanted !== "next" && wanted !== "previous") return "Use next or previous"
-            if (AnimeWatch.phase !== "playing" && !AnimeWatch.betweenEpisodes) return "No episode playing"
-            AnimeWatch.skip(wanted)
-            return wanted
-        }
         function motion(target: string): string { return IrisParts.IrisMotionMeter.start(target) }
         function motioned(): string { return JSON.stringify(IrisParts.IrisMotionMeter.result) }
         function status(): string {
@@ -597,7 +474,6 @@ Scope {
                 dockShown: GlobalStates.irisDockShown,
                 controlCenter: GlobalStates.controlPanelOpen,
                 spotlight: GlobalStates.searchOpen,
-                orbit: GlobalStates.irisOrbitOpen,
                 focus: { open: GlobalStates.sidebarLeftOpen, pinned: Config.options?.iris?.sidebars?.left?.pinned ?? false },
                 today: { open: GlobalStates.sidebarRightOpen, pinned: Config.options?.iris?.sidebars?.right?.pinned ?? false },
                 // Modes that take the screen over until someone closes them.
@@ -677,9 +553,8 @@ Scope {
                     && (root.editScreen.length === 0 || barWindow.screen?.name === root.editScreen)
                 readonly property bool presenting: barWindow.pinned || stage.cardPresent
                     || (controlCentreLoader.item?.present ?? false) || barWindow.editHere
-                    || (dockLoader.item?.overFullscreen ?? false) || (dockLoader.item?.menuOpen ?? false)
+                   
                     || (spotlightLoader.item?.present ?? false) || (galleryLoader.item?.present ?? false)
-                    || (orbitLoader.item?.present ?? false)
                 // Niri keeps a fullscreen window above the Top layer, so the overview
                 // over a game would show every other surface but this one.
                 readonly property bool overviewOverFullscreen: CompositorService.isNiri && NiriService.inOverview
@@ -698,8 +573,8 @@ Scope {
                 onOverlaidChanged: if (!barWindow.overlaid) GlobalStates.irisChassisEpoch++
                 WlrLayershell.layer: barWindow.overlaid ? WlrLayer.Overlay : WlrLayer.Top
                 WlrLayershell.keyboardFocus: barWindow.pinned || stage.cardOpen || (controlCentreLoader.item?.morphOpen ?? false)
-                    || (dockLoader.item?.menuOpen ?? false) || (spotlightLoader.item?.here && GlobalStates.searchOpen)
-                    || (galleryLoader.item?.morphOpen ?? false) || (orbitLoader.item?.wanted ?? false) || (widgetBarLoader.item?.holdsKeyboard ?? false)
+                    || (spotlightLoader.item?.here && GlobalStates.searchOpen)
+                    || (galleryLoader.item?.morphOpen ?? false) || (widgetBarLoader.item?.holdsKeyboard ?? false)
                     ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
                 anchors { left: true; right: true; top: true; bottom: true }
                 readonly property bool suppressed: islandLoader.active
@@ -740,8 +615,8 @@ Scope {
                     onTriggered: if (!barWindow.pointerNearIsland) barWindow.islandEdgeIntent = false }
                 mask: barWindow.canvasSuppressed ? emptyRegion
                     : barWindow.pinned || stage.cardArmed || (controlCentreLoader.item?.armed ?? false)
-                        || (dockLoader.item?.menuOpen ?? false) || (spotlightLoader.item?.armed ?? false)
-                        || (galleryLoader.item?.armed ?? false) || (orbitLoader.item?.armed ?? false)
+                        || (spotlightLoader.item?.armed ?? false)
+                        || (galleryLoader.item?.armed ?? false)
                         || (islandLoader.item?.morphing ?? false)
                         ? null : chassisRegion
                 Region { id: emptyRegion }
@@ -752,12 +627,6 @@ Scope {
                     y: rect ? rect.y : 0
                     width: rect ? rect.width : 0
                     height: rect ? rect.height : 0
-                }
-                MouseArea {
-                    anchors.fill: parent
-                    enabled: dockLoader.item?.menuOpen ?? false
-                    acceptedButtons: Qt.AllButtons
-                    onPressed: dockLoader.item.closeMenu()
                 }
                 MouseArea {
                     anchors.fill: parent
@@ -779,7 +648,6 @@ Scope {
                         height: area.height
                     }
                     Region { item: islandEdgeStrip.armed ? islandEdgeStrip : null }
-                    Region { item: dockLoader.item && !dockLoader.item.inputOff ? dockLoader.item.hitItem : null }
                     Region {
                         readonly property var rect: editLoader.item?.hitRect ?? null
                         x: rect?.x ?? 0
@@ -973,12 +841,10 @@ Scope {
                 // the shape the chassis had on the previous frame. Measured at 3 ms
                 // per open/close for the whole chain — cheaper than one frame of lag.
                 readonly property var fieldShapes: {
-                    const dockBody = dockLoader.item?.bodyShape ?? null
                     const hung = (controlCentreLoader.item?.fieldShapes ?? [])
                         .concat(stage.fieldShapes)
                         .concat(editLoader.item?.fieldShapes ?? [])
                         .concat(widgetBarLoader.item?.fieldShapes ?? [])
-                        .concat(Array.isArray(dockBody) ? dockBody : [])
                         .concat(banners.fieldShapes)
                         .concat(IrisFrame.placeShapesOn(barWindow.screen?.name ?? ""))
                     const bodies = hung.filter(shape => shape.joins === "island")
@@ -1122,39 +988,12 @@ Scope {
                     sourceComponent: IrisWallpaperPicker { screen: barWindow.screen }
                 }
 
-                // A Place like Spotlight: resident, so it opens on a warm frame and grows from where the Island rests.
-                Loader {
-                    id: orbitLoader
-                    z: 2.5
-                    anchors.fill: parent
-                    anchors.margins: IrisFrame.band
-                    active: Config.ready && GlobalStates.deferredPanelsReady && (Config.options?.iris?.orbit?.enable ?? false)
-                    asynchronous: true
-                    sourceComponent: IrisOrbit { screen: barWindow.screen }
-                }
-
                 IrisBanners {
                     id: banners
                     z: 2
                     anchors.fill: parent
                     screenData: barWindow.screen
                     islandShapes: islandLoader.item?.fieldShapes ?? []
-                }
-
-                Loader {
-                    id: dockLoader
-                    z: 2
-                    anchors.fill: parent
-                    active: (Config.options?.iris?.dock?.enable ?? true) && GlobalStates.deferredPanelsReady
-                    asynchronous: true
-                    sourceComponent: IrisDock {
-                        screen: barWindow.screen
-                        onPieceActivated: (slot, kind, rect) => stage.activate(slot, kind, rect)
-                        onPieceMenuRequested: (slot, kind, rect, menu) => {
-                            menu.model = stage.pieceMenu(slot, kind, rect)
-                            menu.requestOpen()
-                        }
-                    }
                 }
 
                 IrisStage {
@@ -1183,7 +1022,7 @@ Scope {
                     }
                     Timer { id: editRelease; interval: 0; onTriggered: editLoader.lingering = editLoader.item?.shown ?? false }
                     active: barWindow.editHere || editLoader.lingering
-                    sourceComponent: IrisEditBar { screenData: barWindow.screen; shapes: barWindow.fieldShapes.concat(stage.pieceShapes, islandLoader.item?.carriedShapes ?? [], dockLoader.item?.editShapes ?? []) }
+                    sourceComponent: IrisEditBar { screenData: barWindow.screen; shapes: barWindow.fieldShapes.concat(stage.pieceShapes, islandLoader.item?.carriedShapes ?? []) }
                 }
 
                 Loader {

@@ -129,31 +129,6 @@ tui_box "$system_snapshot" "System snapshot" "accent-dim" 62
 
 echo ""
 
-# Compatibility guidance follows the actual dependency router. Fedora and
-# Debian/Ubuntu are first-class automated paths now; do not scare those users
-# with the old Arch-only warning.
-case "${OS_GROUP_ID:-unknown}" in
-    arch|fedora|debian|ubuntu|void)
-        tui_success "${DETECTED_DISTRO} has an automated dependency path."
-        ;;
-    nixos)
-        tui_warn "NixOS is declarative: use the NixOS/Home Manager path in docs/NIXOS.md instead of treating this like a mutable distro."
-        ;;
-    *)
-        compatibility_warning=$(cat <<EOF
-Detected target: ${DETECTED_DISTRO}
-The shell can still be installed, but dependency setup may need manual help on this distro.
-Use './setup install --skip-deps' if you already manage the runtime packages yourself.
-EOF
-)
-        tui_box "$compatibility_warning" "Compatibility note" "warning" 76
-        ;;
-esac
-
-if declare -F is_immutable_distro >/dev/null 2>&1 && is_immutable_distro; then
-    tui_warn "Atomic/immutable host detected. Package changes may be layered and can require a reboot before every runtime piece is visible."
-fi
-
 if [[ "$DETECTED_VIRT" != "none" ]]; then
     tui_info "VM detected ($DETECTED_VIRT). Blur, shader transitions and video performance can look very different from bare metal."
 fi

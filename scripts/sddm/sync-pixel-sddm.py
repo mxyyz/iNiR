@@ -337,12 +337,7 @@ def picture_lift(path):
 def read_wallpaper(config):
     """The desktop wallpaper the active family shows."""
     background = config.get("background", {}) or {}
-    waffle_background = dig(config, "waffles", "background", default={}) or {}
-    main_path = background.get("wallpaperPath", "")
-    if config.get("panelFamily", "ii") == "waffle" and not waffle_background.get("useMainWallpaper", True):
-        path = waffle_background.get("wallpaperPath", "") or main_path
-    else:
-        path = main_path
+    path = background.get("wallpaperPath", "")
     if path and path.startswith("file://"):
         path = path[7:]
     return path if path and os.path.isfile(path) else None

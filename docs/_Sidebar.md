@@ -35,8 +35,5 @@
 ### System
 - [Runtime](RUNTIME)
 - [Packages](PACKAGES)
-- [Void Linux](VOID)
-- [Void capability matrix](VOID_CAPABILITIES)
 - [Compositors](COMPOSITORS)
 - [Optimization](OPTIMIZATION)
-- [NixOS](NIXOS)

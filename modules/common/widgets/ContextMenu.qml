@@ -21,7 +21,7 @@ Loader {
     property bool closeOnFocusLost: true
     property bool closeOnHoverLost: true
     property bool closeOnHoverLostAfterEntered: false
-    property int closeOnHoverLostDelay: 500  // ms before closing when hover lost (waffle uses 500)
+    property int closeOnHoverLostDelay: 500  // ms before closing when hover lost
     property bool anchorHovered: false
     property bool closeOnOutsideClick: false
     property var anchorRect: null

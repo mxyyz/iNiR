@@ -41,8 +41,6 @@ _inir() {
         'close-window:Close focused window'
         'ipc:Low-level IPC call'
         'settings:Toggle settings'
-        'settings-window:Open settings window'
-        'waffle-settings-window:Open waffle settings window'
         'repair:Repair shell state'
         'path:Show config path'
         'test-local:Run local tests'

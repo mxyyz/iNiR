@@ -18,13 +18,6 @@ layer-rule {
     opacity 1.0
 }
 
-// iNiR "waffle" family backdrop (wallpaper surface).
-layer-rule {
-    match namespace="quickshell:wBackdrop"
-    place-within-backdrop true
-    opacity 1.0
-}
-
 // iRiS surfaces. With iRiS glass set to Blur they ask Niri to blur what is
 // below them; xray off makes that the windows, not only the wallpaper.
 layer-rule {

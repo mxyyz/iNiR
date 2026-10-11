@@ -148,22 +148,12 @@ Scope {
                 // instantiated from an inline Component. A Loader source URL cannot
                 // initialize required properties and fails to Loader.Error, leaving
                 // this keyboard-exclusive fullscreen window with no way out.
-                sourceComponent: Config.options?.panelFamily === "waffle" ? waffleContent
-                    : Config.options?.panelFamily === "iris" ? irisContent : iiContent
+                sourceComponent: Config.options?.panelFamily === "iris" ? irisContent : iiContent
                 onLoaded: if (item) item.forceActiveFocus()
 
                 Component {
                     id: iiContent
                     CloseConfirmContent {
-                        targetWindow: root.targetWindow
-                        onConfirm: root.confirmClose()
-                        onCancel: root.cancel()
-                    }
-                }
-
-                Component {
-                    id: waffleContent
-                    WCloseConfirmContent {
                         targetWindow: root.targetWindow
                         onConfirm: root.confirmClose()
                         onCancel: root.cancel()

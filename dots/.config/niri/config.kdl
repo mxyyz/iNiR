@@ -256,9 +256,6 @@ binds {
     // ii Cheatsheet
     Mod+Slash { spawn "qs" "-c" "inir" "ipc" "call" "cheatsheet" "toggle"; }
     
-    // ii Panel family (cycle between Material ii and Waffle styles)
-    Mod+Shift+W { spawn "qs" "-c" "inir" "ipc" "call" "panelFamily" "cycle"; }
-    
     // Applications (uses configured terminal from Settings)
     Mod+T { spawn "bash" "-c" "$HOME/.config/quickshell/inir/scripts/launch-terminal.sh"; }
     Mod+Return { spawn "bash" "-c" "$HOME/.config/quickshell/inir/scripts/launch-terminal.sh"; }
@@ -354,8 +351,3 @@ layer-rule {
     opacity 1.0
 }
 
-layer-rule {
-    match namespace="quickshell:wBackdrop"
-    place-within-backdrop true
-    opacity 1.0
-}

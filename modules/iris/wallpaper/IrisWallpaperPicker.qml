@@ -34,7 +34,6 @@ Item {
     readonly property real d: IrisStyle.density
     readonly property bool morphOpen: root.here && GlobalStates.wallpaperSelectorOpen
     readonly property bool multiMonitor: Config.options?.background?.multiMonitor?.enable ?? false
-    readonly property bool onlineEnabled: Config.options?.sidebar?.wallhaven?.enable ?? true
     readonly property var barOptions: Config.options?.iris?.bar ?? ({})
     readonly property bool barBottom: String(root.barOptions?.position ?? "top") === "bottom"
     readonly property var options: Config.options?.iris?.wallpaper ?? ({})
@@ -46,8 +45,7 @@ Item {
     readonly property bool opened: root.morphOpen && surface.settled
     property string targetMonitor: ""
     readonly property string selectionTarget: Wallpapers.currentSelectionTarget()
-    readonly property bool overviewTargetable: (Config.options?.background?.backdrop?.enable ?? true)
-        && (Config.options?.panelFamily ?? "ii") !== "waffle"
+    readonly property bool overviewTargetable: Config.options?.background?.backdrop?.enable ?? true
     readonly property bool targetsOverview: root.selectionTarget === "backdrop"
     function targetOverview(overview: bool): void {
         GlobalStates.wallpaperSelectionTarget = overview ? "backdrop" : "main"
@@ -56,31 +54,6 @@ Item {
     }
     readonly property string currentPath: Wallpapers.currentWallpaperPathForTarget(root.selectionTarget, root.targetMonitor)
 
-    property string source: "library"
-    readonly property bool online: root.source !== "library" && root.onlineEnabled
-    readonly property string provider: root.source === "live" ? "motionbgs" : root.source
-    readonly property var sourceCatalog: ({
-        wallhaven: { id: "wallhaven", label: "Wallhaven", glyph: "travel_explore" },
-        konachan: { id: "konachan", label: "Konachan", glyph: "landscape" },
-        yandere: { id: "yandere", label: "yande.re", glyph: "landscape" },
-        live: { id: "live", label: Translation.tr("Live"), glyph: "motion_photos_on" }
-    })
-    readonly property var onlineSources: !root.onlineEnabled ? []
-        : Array.from(root.options?.sources ?? ["wallhaven", "live"]).map(id => root.sourceCatalog[String(id)]).filter(Boolean)
-    readonly property var sources: [{ id: "library", label: Translation.tr("Library"), glyph: "photo_library" }].concat(root.onlineSources)
-    function offered(id: string): bool { return root.sources.some(entry => entry.id === id) }
-    onSourcesChanged: if (!root.offered(root.source)) root.setSource("library", "")
-
-    // Off, online results keep to what anyone can have on screen: explicit art never shows (every source
-    // asks for safe ratings), and fan service rated safe is filtered by its tags or title here.
-    readonly property bool suggestive: root.options?.suggestive ?? false
-    readonly property var wallhavenExclusions: ["-bikini", "-swimwear", "-lingerie", "-underwear", "-cleavage", "-ecchi",
-        "-panties", "-ass", "-boobs", "-nude"]
-    readonly property var suggestivePattern: /(^|[\s_,.-])(bikinis?|swimsuits?|swimwear|lingerie|panties|pantsu|underwear|bra|cleavage|breasts?|boobs?|nipples?|nude|naked|topless|bottomless|ecchi|thong|sideboob|underboob|see[_-]through|bunny[_ ]girl|undressing|towel|onsen|bathing|ass|butt|sexy|seductive|lewd|erotic|sensual)([\s_,.-]|$)/i
-    function suggestiveImage(image): bool {
-        return root.suggestivePattern.test(String(image?.tags ?? "") + " " + String(image?.title ?? "") + " " + String(image?.slug ?? ""))
-    }
-    onSuggestiveChanged: if (root.morphOpen && root.online) root.searchOnline(1, true)
     property int selectedIndex: 0
     readonly property string query: search.text.trim()
 
@@ -107,7 +80,7 @@ Item {
         if (!same(folders, root.libraryFolders)) root.libraryFolders = folders
         if (!same(files, root.libraryFiles)) root.libraryFiles = files
         if (root.selectedIndex >= files.length) root.selectedIndex = Math.max(0, files.length - 1)
-        if (root.morphOpen && !root.online && !root.previewArmed && root.query.length === 0) root.selectCurrent()
+        if (root.morphOpen && !root.previewArmed && root.query.length === 0) root.selectCurrent()
     }
     Connections {
         target: Wallpapers.folderModel
@@ -136,16 +109,6 @@ Item {
     }
     readonly property string sortOrder: ["newest", "oldest", "name"].includes(String(root.options?.sort ?? "newest"))
         ? String(root.options?.sort ?? "newest") : "newest"
-    readonly property string onlineOrder: ["top", "newest", "random"].includes(String(root.options?.onlineSort ?? "top"))
-        ? String(root.options?.onlineSort ?? "top") : "top"
-    readonly property string topRange: ["1d", "1w", "1M", "1y"].includes(String(root.options?.topRange ?? "1w"))
-        ? String(root.options?.topRange ?? "1w") : "1w"
-    readonly property string onlineSorting: root.onlineOrder === "top" ? "toplist:" + root.topRange
-        : root.onlineOrder === "random" ? "random" : "date_added"
-    readonly property bool onlineSortable: root.online && root.provider !== "motionbgs"
-    function setOrder(value: string): void {
-        Config.setNestedValue(root.online ? "iris.wallpaper.onlineSort" : "iris.wallpaper.sort", value)
-    }
     readonly property var visibleFiles: {
         const list = root.kind === "all" ? root.libraryFiles.slice()
             : root.libraryFiles.filter(entry => root.kindOf(entry.path) === root.kind)
@@ -153,10 +116,9 @@ Item {
         else list.sort((a, b) => root.sortOrder === "oldest" ? a.time - b.time : b.time - a.time)
         return list
     }
-    onSortOrderChanged: if (root.morphOpen && !root.online) { root.selectedIndex = 0; grid.contentX = 0; root.selectCurrent() }
-    onOnlineSortingChanged: if (root.morphOpen && root.onlineSortable) root.searchOnline(1, true)
+    onSortOrderChanged: if (root.morphOpen) { root.selectedIndex = 0; grid.contentX = 0; root.selectCurrent() }
     readonly property int libraryCount: (root.visibleFiles ?? []).length
-    readonly property string libraryPath: !root.online ? String((root.visibleFiles ?? [])[root.selectedIndex]?.path ?? "") : ""
+    readonly property string libraryPath: String((root.visibleFiles ?? [])[root.selectedIndex]?.path ?? "")
 
     readonly property string folderPath: Wallpapers.effectiveDirectory.replace(/\/+$/, "") || "/"
     readonly property string homePath: String(Quickshell.env("HOME") ?? "").replace(/\/+$/, "")
@@ -242,158 +204,16 @@ Item {
             }
         }
     }
-    readonly property bool pathMode: !root.online && /^[~\/]/.test(root.query)
+    readonly property bool pathMode: /^[~\/]/.test(root.query)
     function jumpTo(text: string): void {
         const path = text.replace(/^~(?=\/|$)/, root.homePath).replace(/\/+$/, "") || "/"
         search.text = ""
         root.openFolder(path)
     }
 
-    readonly property var onlineImages: (Wallhaven.responses ?? [])
-        .filter(response => response && response.provider === root.provider)
-        .reduce((all, response) => all.concat((response.images ?? []).filter(image => image && !image.is_nsfw && image.file_url
-            && (root.suggestive || !root.suggestiveImage(image)))), [])
-    readonly property string onlineMessage: {
-        const messages = (Wallhaven.responses ?? []).filter(response => response && response.provider === root.provider && response.message)
-        return messages.length > 0 ? String(messages[messages.length - 1].message) : ""
-    }
-    readonly property int onlinePage: {
-        const pages = (Wallhaven.responses ?? []).filter(response => response && response.provider === root.provider).map(response => Number(response.page) || 1)
-        return pages.length > 0 ? Math.max(...pages) : 0
-    }
-    readonly property bool onlineExhausted: (Wallhaven.responses ?? []).some(response => response && response.provider === root.provider
-        && Number(response.page) > 1 && (response.images ?? []).length === 0)
-    readonly property var selectedImage: root.online ? (root.onlineImages[root.selectedIndex] ?? null) : null
-
-    readonly property var wallhavenDiscoveries: [
-        { label: Translation.tr("Anime"), tags: [], category: "010" },
-        { label: Translation.tr("Anime scenery"), tags: ["landscape"], category: "010" },
-        { label: Translation.tr("Ricing"), tags: ["linux"], category: "111" },
-        { label: Translation.tr("Pixel art"), tags: ["pixel art"], category: "111" },
-        { label: Translation.tr("Cyberpunk"), tags: ["cyberpunk"], category: "111" },
-        { label: Translation.tr("Minimal"), tags: ["minimal"], category: "111" },
-        { label: Translation.tr("Dark"), tags: ["dark"], category: "111" },
-        { label: Translation.tr("Nature"), tags: ["nature"], category: "100" },
-        { label: Translation.tr("Space"), tags: ["space"], category: "100" },
-        { label: Translation.tr("Abstract"), tags: ["abstract"], category: "111" }
-    ]
-    readonly property var konachanDiscoveries: [
-        { label: Translation.tr("Anime"), tags: [] },
-        { label: Translation.tr("Landscape"), tags: ["landscape"] },
-        { label: Translation.tr("Sky"), tags: ["sky"] },
-        { label: Translation.tr("City"), tags: ["city"] },
-        { label: Translation.tr("Night"), tags: ["night"] }
-    ]
-    readonly property var yandereDiscoveries: [
-        { label: Translation.tr("Landscape"), tags: ["landscape"] },
-        { label: Translation.tr("Anime"), tags: [] }
-    ]
-    readonly property var liveDiscoveries: [
-        { label: Translation.tr("Anime"), tags: ["tag:anime"] },
-        { label: "Frieren", tags: ["tag:frieren"] },
-        { label: "Genshin", tags: ["tag:genshin-impact"] },
-        { label: "Star Rail", tags: ["tag:honkai-star-rail"] },
-        { label: "Zenless", tags: ["tag:zenless-zone-zero"] },
-        { label: "Wuthering Waves", tags: ["tag:wuthering-waves"] },
-        { label: "Blue Archive", tags: ["tag:blue-archive"] },
-        { label: "Jujutsu Kaisen", tags: ["tag:jujutsu-kaisen"] },
-        { label: "Chainsaw Man", tags: ["tag:chainsaw-man"] },
-        { label: "Demon Slayer", tags: ["tag:demon-slayer"] },
-        { label: "Solo Leveling", tags: ["tag:solo-leveling"] },
-        { label: "One Piece", tags: ["tag:one-piece"] },
-        { label: "Miku", tags: ["tag:hatsune-miku"] },
-        { label: "Ghibli", tags: ["tag:ghibli"] },
-        { label: Translation.tr("Lofi"), tags: ["tag:lofi"] },
-        { label: Translation.tr("Pixel"), tags: ["tag:pixel"] },
-        { label: Translation.tr("Cyberpunk"), tags: ["tag:cyberpunk"] },
-        { label: Translation.tr("Rain"), tags: ["tag:rain"] },
-        { label: Translation.tr("Sakura"), tags: ["tag:sakura"] },
-        { label: Translation.tr("Night"), tags: ["tag:night"] }
-    ]
-    readonly property var discoveries: root.source === "live" ? root.liveDiscoveries
-        : root.source === "wallhaven" ? root.wallhavenDiscoveries
-        : root.source === "yandere" ? root.yandereDiscoveries : root.konachanDiscoveries
-    property int wallhavenDiscovery: 0
-    property int konachanDiscovery: 0
-    property int yandereDiscovery: 0
-    property int liveDiscovery: 0
-    readonly property int discovery: root.source === "live" ? root.liveDiscovery
-        : root.source === "wallhaven" ? root.wallhavenDiscovery
-        : root.source === "yandere" ? root.yandereDiscovery : root.konachanDiscovery
-    function pickDiscovery(index: int): void {
-        if (root.source === "live") root.liveDiscovery = index
-        else if (root.source === "wallhaven") root.wallhavenDiscovery = index
-        else if (root.source === "yandere") root.yandereDiscovery = index
-        else root.konachanDiscovery = index
-        root.series = null
-        search.text = ""
-        onlineSearchDelay.stop()
-        root.searchOnline(1, true)
-    }
-
-    readonly property var airing: root.online ? (AnimeService.topAiring ?? []).slice(0, 16) : []
-    property var series: null
-    property var seriesQueries: []
-    property int seriesAttempt: 0
-    function seriesLabel(anime): string {
-        return String(anime?.titleEnglish || anime?.title || "")
-            .split(/\s[-–]\s|:\s| -/)[0]
-            .replace(/\s+(season\s*\d+|\d+(st|nd|rd|th)\s+season|part\s*\d+|cour\s*\d+|[IVX]{1,4})$/i, "")
-            .trim()
-    }
-    function pickSeries(anime): void {
-        if (!anime) return
-        if (root.series?.id === anime.id) { root.pickDiscovery(root.discovery); return }
-        const english = root.seriesLabel(anime)
-        const romaji = root.seriesLabel({ title: anime.titleRomaji ?? "" })
-        const slug = english.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")
-        const booru = root.source === "konachan" || root.source === "yandere"
-        const queries = root.source === "live"
-            ? [["tag:" + slug], [english], [romaji]]
-            : booru ? [[slug.replace(/-/g, "_")], [romaji.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "")]]
-            : [[english], [romaji]]
-        root.series = anime
-        root.seriesQueries = queries.filter((entry, i) => String(entry[0]).replace(/^tag:/, "").length > 0
-            && queries.findIndex(other => other[0] === entry[0]) === i)
-        root.seriesAttempt = 0
-        search.text = ""
-        onlineSearchDelay.stop()
-        root.searchOnline(1, true)
-    }
-    Connections {
-        target: Wallhaven
-        function onResponseFinished(): void {
-            if (!root.online || root.series === null || root.onlineImages.length > 0 || Wallhaven.runningRequests > 0) return
-            if (root.seriesAttempt + 1 >= root.seriesQueries.length) return
-            root.seriesAttempt += 1
-            root.searchOnline(1, true)
-        }
-    }
-
-    property string downloadingId: ""
-    readonly property int count: root.online ? root.onlineImages.length : root.libraryCount
+    readonly property int count: root.libraryCount
 
     function entryFor(index: int): var {
-        if (root.online) {
-            const image = root.onlineImages[index]
-            if (!image) return null
-            const live = image.is_video === true
-            const eyebrow = root.series ? String(root.series.titleJapanese || root.series.title || "") : ""
-            const light = live && String(Config.options?.iris?.wallpaper?.liveQuality ?? "best") === "light"
-            const facts = live ? [{ glyph: "motion_photos_on", label: Translation.tr("Live") }, { label: light ? "HD" : String(image.quality ?? "HD"), figure: true }]
-                : [{ glyph: "image", label: Translation.tr("Picture") }]
-            facts.push({ label: light ? "1920 × 1080" : image.width + " × " + image.height, figure: true })
-            return {
-                key: String(image.id),
-                imageUrl: String(image.preview_url ?? ""),
-                fullUrl: live ? "" : String(image.file_url ?? ""),
-                motionSource: live ? String(image.motion_url ?? "") : "",
-                video: live,
-                eyebrow: eyebrow,
-                facts: facts,
-                current: false
-            }
-        }
         const file = (root.visibleFiles ?? [])[index]
         if (!file) return null
         const video = Wallpapers.isVideoFile(file.path)
@@ -412,18 +232,13 @@ Item {
         }
     }
     readonly property var selectedEntry: {
-        void (root.onlineImages.length + root.visibleFiles.length + root.currentPath)
+        void (root.visibleFiles.length + root.currentPath)
         return root.entryFor(root.selectedIndex)
     }
-    readonly property bool searching: root.online && Wallhaven.runningRequests > 0
-    readonly property string emptyGlyph: root.online ? "travel_explore"
-        : root.pathMode ? "drive_file_move"
+    readonly property string emptyGlyph: root.pathMode ? "drive_file_move"
         : search.text.length > 0 ? "search_off"
         : root.libraryFolders.length > 0 ? "folder_open" : "hide_image"
-    readonly property string emptyText: root.online && !Network.online ? Network.offlineReason
-        : root.online
-        ? (root.searching ? Translation.tr("Looking for wallpapers…") : (root.onlineMessage || Translation.tr("Nothing found")))
-        : root.pathMode ? Translation.tr("Press Enter to open %1").arg(root.query)
+    readonly property string emptyText: root.pathMode ? Translation.tr("Press Enter to open %1").arg(root.query)
         : search.text.length > 0 ? Translation.tr("No matches")
         : root.libraryFolders.length > 0 ? Translation.tr("Wallpapers live in the folders above")
         : Translation.tr("No wallpapers in this folder")
@@ -452,8 +267,6 @@ Item {
         const gsTarget = GlobalStates.wallpaperSelectorTargetMonitor ?? ""
         root.targetMonitor = !root.multiMonitor ? ""
             : gsTarget.length > 0 ? gsTarget : (GlobalStates.focusedScreen?.name ?? "")
-        root.source = "library"
-        root.series = null
         root.hoverKey = ""
         Wallpapers.searchQuery = ""
         search.text = ""
@@ -484,43 +297,24 @@ Item {
         target: Wallpapers
         function onDirectoryChanged(): void {
             Wallpapers.generateThumbnail("large")
-            if (!root.online) { root.selectedIndex = 0; grid.contentX = 0 }
+            root.selectedIndex = 0; grid.contentX = 0
             folderRead.restart()
             root.folderInfo = ({})
             if (root.morphOpen) folderScanDelay.restart()
         }
     }
 
-    function setSource(next: string, text): void {
-        const wanted = String(text ?? "")
-        if (root.source === next && wanted.length === 0) return
-        onlineSearchDelay.stop()
-        root.series = null
-        root.hoverKey = ""
-        root.source = next
-        search.text = wanted
-        onlineSearchDelay.stop()
-        root.selectedIndex = 0
-        grid.contentX = 0
-        if (root.online) {
-            AnimeService.fetchTopAiring()
-            root.searchOnline(1, true)
-        }
-    }
     function takeRequest(): void {
-        const requested = GlobalStates.wallpaperSelectorSource
         const text = GlobalStates.wallpaperSelectorQuery
-        if (requested.length === 0) return
+        if (GlobalStates.wallpaperSelectorSource.length === 0) return
         GlobalStates.wallpaperSelectorSource = ""
         GlobalStates.wallpaperSelectorQuery = ""
-        const next = requested !== "library" && !root.offered(requested) ? "library" : requested
-        const wantedSeries = GlobalStates.wallpaperSelectorSeries
-        if (wantedSeries !== null) {
-            GlobalStates.wallpaperSelectorSeries = null
-            if (next !== "library") { root.setSource(next, ""); root.pickSeries(wantedSeries); return }
-        }
-        if (next === "library" && /^[~\/]/.test(text)) { root.setSource(next, ""); root.jumpTo(text); return }
-        root.setSource(next, text)
+        if (text.length === 0) return
+        root.hoverKey = ""
+        root.selectedIndex = 0
+        grid.contentX = 0
+        if (/^[~\/]/.test(text)) root.jumpTo(text)
+        else search.text = text
     }
     Connections {
         target: GlobalStates
@@ -532,38 +326,9 @@ Item {
             root.kind = wanted
             root.selectedIndex = 0
         }
-        function onWallpaperSelectorMoveRequested(step: int): void { if (root.morphOpen && !root.online) root.move(step) }
+        function onWallpaperSelectorMoveRequested(step: int): void { if (root.morphOpen) root.move(step) }
     }
     onKindChanged: GlobalStates.wallpaperSelectorKindActive = root.kind
-    function cycleSource(step: int): void {
-        const ids = root.sources.map(entry => entry.id)
-        const at = Math.max(0, ids.indexOf(root.source))
-        root.setSource(ids[(at + step + ids.length) % ids.length], "")
-    }
-    function searchOnline(page: int, replace: bool): void {
-        if (!Network.online) return
-        const option = root.discoveries[root.discovery] ?? root.discoveries[0]
-        const live = root.provider === "motionbgs"
-        const booru = root.provider === "konachan" || root.provider === "yandere"
-        const tags = root.series !== null ? (root.seriesQueries[root.seriesAttempt] ?? [])
-            : root.query.length > 0 ? (live ? [root.query] : booru ? root.query.toLowerCase().split(/\s+/).filter(Boolean) : root.query.split(/\s+/))
-            : option.tags
-        const asked = root.provider === "wallhaven" && !root.suggestive ? tags.concat(root.wallhavenExclusions) : tags
-        if (replace) { Wallhaven.beginSearch(); root.selectedIndex = 0; grid.contentX = 0 }
-        const screen = root.screen
-        Wallhaven.makeRequest(asked, false, live ? 36 : (Config.options?.sidebar?.wallhaven?.limit ?? 24), page,
-            live ? "111" : option.category, undefined, root.provider,
-            live ? { mode: "any" }
-                : { mode: "auto", width: screen?.width ?? 1920, height: screen?.height ?? 1080, ratioCode: "", aspect: (screen?.width ?? 16) / Math.max(1, screen?.height ?? 9) },
-            live ? undefined : root.onlineSorting)
-    }
-    Connections {
-        target: Network
-        function onOnlineChanged(): void {
-            if (Network.online && root.morphOpen && root.online && root.onlineImages.length === 0) root.searchOnline(1, true)
-        }
-    }
-    Timer { id: onlineSearchDelay; interval: 450; onTriggered: { root.series = null; root.searchOnline(1, true) } }
 
     function apply(filePath: string, isDir: bool): void {
         if (!filePath || filePath.length === 0) return
@@ -572,7 +337,7 @@ Item {
         root.committing = true
         Wallpapers.applySelectionTarget(FileUtils.trimFileProtocol(filePath), target,
             Appearance.m3colors.darkmode, root.targetMonitor)
-        if (target === "backdrop" || target === "waffle-backdrop") Wallpapers.cancelWallpaperPreview()
+        if (target === "backdrop") Wallpapers.cancelWallpaperPreview()
         else Wallpapers.clearWallpaperPreview()
         root.finishSelection()
         Qt.callLater(() => root.committing = false)
@@ -581,12 +346,12 @@ Item {
     readonly property bool livePreview: root.options?.livePreview ?? true
     property bool previewArmed: false
     property bool committing: false
-    onSelectedIndexChanged: if (root.morphOpen && !root.online) previewDelay.restart()
+    onSelectedIndexChanged: if (root.morphOpen) previewDelay.restart()
     Timer {
         id: previewDelay
         interval: 180
         onTriggered: {
-            if (!root.morphOpen || root.online || !root.livePreview || !root.previewArmed || root.targetsOverview) return
+            if (!root.morphOpen || !root.livePreview || !root.previewArmed || root.targetsOverview) return
             const path = root.libraryPath
             if (!path || Wallpapers.isVideoFile(path) || path === FileUtils.trimFileProtocol(String(root.currentPath ?? ""))) Wallpapers.cancelWallpaperPreview()
             else Wallpapers.previewWallpaper(path, root.targetMonitor)
@@ -604,7 +369,6 @@ Item {
         }
     }
     onLivePreviewChanged: if (!root.livePreview) Wallpapers.cancelWallpaperPreview()
-    onOnlineChanged: if (root.online) Wallpapers.cancelWallpaperPreview()
     Component.onDestruction: if (!root.committing) Wallpapers.cancelWallpaperPreview()
     function finishSelection(): void {
         Config.setNestedValue("wallpaperSelector.selectionTarget", "main")
@@ -613,51 +377,7 @@ Item {
         GlobalStates.wallpaperSelectorTargetMonitor = ""
         GlobalStates.wallpaperSelectorOpen = false
     }
-    function applyOnline(image): void {
-        if (!image || !image.file_url || download.running) return
-        const folder = Directories.booruDownloads
-        const live = image.is_video === true
-        const sharp = live && String(image.file_url_4k ?? "").length > 0
-            && String(Config.options?.iris?.wallpaper?.liveQuality ?? "best") !== "light"
-        const name = live ? "motionbgs-" + String(image.slug ?? image.id) + (sharp ? "-4k" : "") + ".mp4"
-            : root.provider + "-" + image.id + (image.file_ext ? "." + image.file_ext : "")
-        download.localPath = folder + "/" + name
-        root.downloadingId = String(image.id)
-        download.total = 0
-        download.received = 0
-        download.command = ["/usr/bin/bash", "-c", 'mkdir -p "$1" && [ -s "$2" ] && exit 0; '
-            + 'echo "total $(curl -sIL -A "$4" "$3" | tr -d "\\r" | awk \'tolower($1)=="content-length:" { n = $2 } END { print n + 0 }\')"; '
-            + 'curl -fsSL -A "$4" "$3" -o "$2.part" && mv "$2.part" "$2"',
-            "_", folder, download.localPath, sharp ? image.file_url_4k : image.file_url, Wallhaven.defaultUserAgent]
-        download.running = true
-    }
-    Process {
-        id: download
-        property string localPath: ""
-        property real total: 0
-        property real received: 0
-        readonly property real progress: download.total > 0 ? Math.min(1, download.received / download.total) : 0
-        stdout: SplitParser {
-            onRead: line => { if (line.startsWith("total ")) download.total = Number(line.slice(6)) || 0 }
-        }
-        onExited: exitCode => {
-            root.downloadingId = ""
-            if (exitCode === 0) root.apply(download.localPath, false)
-        }
-    }
-    Timer {
-        interval: 350
-        repeat: true
-        running: download.running && download.total > 0
-        onTriggered: if (!downloadSize.running) downloadSize.running = true
-    }
-    Process {
-        id: downloadSize
-        command: ["stat", "-c", "%s", download.localPath + ".part"]
-        stdout: StdioCollector { onStreamFinished: download.received = Number(text.trim()) || download.received }
-    }
     function applySelected(): void {
-        if (root.online) { root.applyOnline(root.selectedImage); return }
         if (root.libraryPath.length > 0) root.apply(root.libraryPath, false)
     }
     function move(step: int): void {
@@ -687,9 +407,9 @@ Item {
             else GlobalStates.wallpaperSelectorOpen = false
         }
     }
-    Shortcut { sequence: "Alt+Left"; enabled: root.morphOpen && !root.online && root.canGoBack; onActivated: Wallpapers.navigateBack() }
-    Shortcut { sequence: "Alt+Right"; enabled: root.morphOpen && !root.online && root.canGoForward; onActivated: Wallpapers.navigateForward() }
-    Shortcut { sequence: "Alt+Up"; enabled: root.morphOpen && !root.online; onActivated: Wallpapers.navigateUp() }
+    Shortcut { sequence: "Alt+Left"; enabled: root.morphOpen && root.canGoBack; onActivated: Wallpapers.navigateBack() }
+    Shortcut { sequence: "Alt+Right"; enabled: root.morphOpen && root.canGoForward; onActivated: Wallpapers.navigateForward() }
+    Shortcut { sequence: "Alt+Up"; enabled: root.morphOpen; onActivated: Wallpapers.navigateUp() }
 
 
     RectangularShadow {
@@ -741,14 +461,12 @@ Item {
                 spacing: Math.round(6 * root.d)
 
                 WallpaperGlyphButton {
-                    visible: !root.online
                     glyph: "chevron_left"
                     enabled: root.canGoBack
                     Accessible.name: Translation.tr("Back")
                     onClicked: Wallpapers.navigateBack()
                 }
                 WallpaperGlyphButton {
-                    visible: !root.online
                     glyph: "chevron_right"
                     enabled: root.canGoForward
                     Accessible.name: Translation.tr("Forward")
@@ -757,7 +475,6 @@ Item {
 
                 Flickable {
                     id: crumbFlick
-                    visible: !root.online
                     Layout.fillWidth: true
                     Layout.preferredHeight: Math.round(34 * root.d)
                     contentWidth: crumbRow.implicitWidth
@@ -838,33 +555,11 @@ Item {
                         }
                     }
                 }
-                IrisText {
-                    visible: root.online
-                    Layout.fillWidth: true
-                    Layout.leftMargin: Math.round(4 * root.d)
-                    text: root.source === "live" ? Translation.tr("Live wallpapers")
-                        : Translation.tr("Discover on %1").arg(root.sources.find(entry => entry.id === root.source)?.label ?? "Wallhaven")
-                    font.pixelSize: IrisStyle.typeLabel
-                    font.weight: IrisStyle.weight(Font.DemiBold)
-                    elide: Text.ElideRight
-                }
                 WallpaperGlyphButton {
-                    visible: !root.online
                     glyph: "push_pin"
                     selected: root.pinned
                     Accessible.name: root.pinned ? Translation.tr("Unpin this folder") : Translation.tr("Pin this folder")
                     onClicked: root.togglePin()
-                }
-
-                IrisSegmented {
-                    id: sourceSwitch
-                    visible: root.sources.length > 1
-                    Layout.preferredWidth: Math.round(84 * root.d) * root.sources.length + 2 * sourceSwitch.inset
-                    Layout.preferredHeight: Math.round(34 * root.d)
-                    accessibleName: Translation.tr("Source")
-                    options: root.sources.map(entry => ({ value: entry.id, label: entry.label }))
-                    current: root.source
-                    onPicked: value => root.setSource(value, "")
                 }
             }
 
@@ -902,37 +597,26 @@ Item {
                         clip: true
                         focus: true
                         onTextChanged: {
-                            if (root.online) {
-                                if (search.text.length > 0) root.series = null
-                                onlineSearchDelay.restart()
-                                return
-                            }
                             Wallpapers.searchQuery = /^[~\/]/.test(text) ? "" : text
                             root.selectedIndex = 0
                         }
                         Keys.onPressed: event => {
                             const rows = grid.rows
-                            if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) {
-                                root.cycleSource(event.key === Qt.Key_Backtab ? -1 : 1)
-                                search.forceActiveFocus()
-                            }
-                            else if (event.modifiers & Qt.AltModifier) return
+                            if (event.modifiers & Qt.AltModifier) return
                             else if (event.key === Qt.Key_Right && search.text.length === 0) root.move(rows)
                             else if (event.key === Qt.Key_Left && search.text.length === 0) root.move(-rows)
                             else if (event.key === Qt.Key_Down) root.move(1)
                             else if (event.key === Qt.Key_Up) root.move(-1)
                             else if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter) && root.pathMode) root.jumpTo(root.query)
                             else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) root.applySelected()
-                            else if (event.key === Qt.Key_Backspace && search.text.length === 0 && !root.online) Wallpapers.navigateUp()
+                            else if (event.key === Qt.Key_Backspace && search.text.length === 0) Wallpapers.navigateUp()
                             else return
                             event.accepted = true
                         }
                         IrisText {
                             anchors.verticalCenter: parent.verticalCenter
                             visible: search.text.length === 0
-                            text: root.source === "live" ? Translation.tr("Search live wallpapers")
-                                : root.online ? Translation.tr("Search %1").arg(root.sources.find(entry => entry.id === root.source)?.label ?? "Wallhaven")
-                                : Translation.tr("Search in %1, or type a path").arg(root.crumbs[root.crumbs.length - 1]?.label ?? "")
+                            text: Translation.tr("Search in %1, or type a path").arg(root.crumbs[root.crumbs.length - 1]?.label ?? "")
                             color: IrisStyle.muted
                             font.pixelSize: search.font.pixelSize
                         }
@@ -942,8 +626,8 @@ Item {
                         anchors.right: parent.right
                         anchors.rightMargin: Math.round(14 * root.d)
                         anchors.verticalCenter: parent.verticalCenter
-                        visible: (root.online || search.text.length > 0) && !root.pathMode
-                        text: Wallhaven.runningRequests > 0 && root.online ? Translation.tr("Loading…") : String(root.count)
+                        visible: search.text.length > 0 && !root.pathMode
+                        text: String(root.count)
                         color: IrisStyle.secondaryAccent
                         font.family: IrisStyle.fontNumbers
                         font.pixelSize: IrisStyle.typeLabel
@@ -953,36 +637,20 @@ Item {
 
                 WallpaperKinds {
                     id: kindFilter
-                    visible: !root.online && kindFilter.wanted
+                    visible: kindFilter.wanted
                     picker: root
                 }
                 IrisSegmented {
-                    visible: !root.online || root.onlineSortable
                     glyphOnly: true
                     implicitHeight: Math.round(34 * root.d)
                     accessibleName: Translation.tr("Order")
-                    options: root.online
-                        ? [{ value: "top", label: Translation.tr("Top"), glyph: "trending_up" },
-                            { value: "newest", label: Translation.tr("Newest"), glyph: "schedule" },
-                            { value: "random", label: Translation.tr("Random"), glyph: "shuffle" }]
-                        : [{ value: "newest", label: Translation.tr("Newest"), glyph: "schedule" },
-                            { value: "oldest", label: Translation.tr("Oldest"), glyph: "history" },
-                            { value: "name", label: Translation.tr("Name"), glyph: "sort_by_alpha" }]
-                    current: root.online ? root.onlineOrder : root.sortOrder
-                    onPicked: value => root.setOrder(value)
-                }
-                IrisSegmented {
-                    visible: root.onlineSortable && root.onlineOrder === "top"
-                    Layout.preferredWidth: Math.round(58 * root.d) * 4 + 2 * inset
-                    Layout.preferredHeight: Math.round(34 * root.d)
-                    accessibleName: Translation.tr("Top of the")
-                    options: [{ value: "1d", label: Translation.tr("Day") }, { value: "1w", label: Translation.tr("Week") },
-                        { value: "1M", label: Translation.tr("Month") }, { value: "1y", label: Translation.tr("Year") }]
-                    current: root.topRange
-                    onPicked: value => Config.setNestedValue("iris.wallpaper.topRange", value)
+                    options: [{ value: "newest", label: Translation.tr("Newest"), glyph: "schedule" },
+                        { value: "oldest", label: Translation.tr("Oldest"), glyph: "history" },
+                        { value: "name", label: Translation.tr("Name"), glyph: "sort_by_alpha" }]
+                    current: root.sortOrder
+                    onPicked: value => Config.setNestedValue("iris.wallpaper.sort", value)
                 }
                 WallpaperGlyphButton {
-                    visible: !root.online
                     glyph: "shuffle"
                     enabled: root.libraryCount > 0
                     Accessible.name: Translation.tr("Random wallpaper")
@@ -991,23 +659,11 @@ Item {
                         if (pick) root.apply(pick.path, false)
                     }
                 }
-                WallpaperGlyphButton {
-                    visible: root.online
-                    glyph: "refresh"
-                    Accessible.name: Translation.tr("Refresh")
-                    onClicked: root.searchOnline(1, true)
-                }
             }
 
             WallpaperFolders {
                 Layout.fillWidth: true
-                visible: !root.online && root.query.length === 0
-                picker: root
-            }
-
-            WallpaperDiscovery {
-                Layout.fillWidth: true
-                visible: root.online
+                visible: root.query.length === 0
                 picker: root
             }
 
@@ -1021,11 +677,6 @@ Item {
                 radius: Math.max(IrisStyle.radiusTile, surface.radius - surface.pad)
             }
 
-            ScriptModel {
-                id: onlineResultsModel
-                objectProp: "id"
-                values: root.onlineImages
-            }
             ScriptModel {
                 id: libraryModel
                 objectProp: "path"
@@ -1045,10 +696,8 @@ Item {
                 boundsBehavior: Flickable.StopAtBounds
                 flickableDirection: Flickable.HorizontalFlick
                 cacheBuffer: Math.round(cellWidth * 4)
-                model: root.online ? onlineResultsModel : libraryModel
+                model: libraryModel
                 currentIndex: root.selectedIndex
-                onContentXChanged: if (root.online && Wallhaven.runningRequests === 0 && root.onlinePage > 0 && !root.onlineExhausted
-                    && contentX + width > contentWidth - cellWidth * 2) root.searchOnline(root.onlinePage + 1, false)
                 Behavior on contentX {
                     enabled: wheelScroll.animating && !glide.running
                     NumberAnimation { duration: IrisStyle.duration(180); easing.type: IrisStyle.feedbackEasing }
@@ -1101,26 +750,18 @@ Item {
                 delegate: WallpaperTile {
                     id: slot
                     required property var modelData
-                    readonly property string path: !root.online ? String(slot.modelData?.path ?? "") : ""
-                    readonly property var image: root.online ? slot.modelData : null
-                    readonly property bool liveImage: slot.image?.is_video === true
+                    readonly property string path: String(slot.modelData?.path ?? "")
                     width: grid.cellWidth
                     height: grid.cellHeight
                     picker: root
-                    key: root.online ? String(slot.image?.id ?? "") : slot.path
+                    key: slot.path
                     filePath: slot.path
-                    imageUrl: root.online ? String(slot.image?.preview_url ?? "") : ""
-                    video: root.online ? slot.liveImage : Wallpapers.isVideoFile(slot.path)
-                    motionSource: !slot.video ? "" : root.online ? String(slot.image?.motion_url ?? "") : slot.path
-                    quality: !slot.liveImage ? ""
-                        : String(Config.options?.iris?.wallpaper?.liveQuality ?? "best") === "light" ? "HD" : String(slot.image?.quality ?? "")
-                    label: root.online
-                        ? (slot.liveImage ? String(slot.image?.title ?? "") : (slot.image ? slot.image.width + " × " + slot.image.height : ""))
-                        : String(slot.modelData?.name ?? "").replace(/\.[^.]+$/, "")
+                    video: Wallpapers.isVideoFile(slot.path)
+                    motionSource: slot.video ? slot.path : ""
+                    label: String(slot.modelData?.name ?? "").replace(/\.[^.]+$/, "")
                     selected: root.selectedIndex === slot.index
-                    current: !root.online && Wallpapers.isCurrentWallpaperPath(slot.path, root.selectionTarget, root.targetMonitor)
-                    busy: root.online && root.downloadingId.length > 0 && root.downloadingId === String(slot.image?.id ?? "")
-                    onCommitted: root.online ? root.applyOnline(slot.image) : root.apply(slot.path, false)
+                    current: Wallpapers.isCurrentWallpaperPath(slot.path, root.selectionTarget, root.targetMonitor)
+                    onCommitted: root.apply(slot.path, false)
                 }
 
                 WallpaperEmpty {
@@ -1139,23 +780,12 @@ Item {
                     spacing: 0
                     IrisText {
                         Layout.fillWidth: true
-                        visible: root.downloadingId.length > 0
-                        text: download.progress > 0 ? Translation.tr("Downloading… %1%").arg(Math.round(download.progress * 100))
-                            : Translation.tr("Downloading…")
-                        font.pixelSize: IrisStyle.typeLabel
-                        font.weight: IrisStyle.weight(Font.DemiBold)
-                    }
-                    IrisText {
-                        Layout.fillWidth: true
-                        text: root.online ? (root.selectedImage ? (root.selectedImage.is_video === true
-                                ? Translation.tr("Plays on your desktop · saved to your wallpapers")
-                                : Translation.tr("Saved to your wallpapers")) : "")
-                            : root.pathMode ? Translation.tr("Press Enter to open %1").arg(root.query)
+                        text: root.pathMode ? Translation.tr("Press Enter to open %1").arg(root.query)
                             : root.targetsOverview ? Translation.tr("Sets the wallpaper behind the overview")
                             : Wallpapers.thumbnailGenerationRunning ? Translation.tr("Preparing previews…")
                             : root.livePreview && root.previewArmed && !(root.selectedEntry?.video ?? false) ? Translation.tr("Previewing on the desktop")
                             : ""
-                        color: root.downloadingId.length === 0 ? IrisStyle.subtext : IrisStyle.muted
+                        color: IrisStyle.subtext
                         font.pixelSize: IrisStyle.typeMeta
                         elide: Text.ElideRight
                     }
@@ -1200,7 +830,7 @@ Item {
                     buttonRadiusPressed: height / 2
                     emphasized: true
                     text: Translation.tr("Apply")
-                    enabled: (root.online ? root.selectedImage !== null : root.libraryPath.length > 0) && root.downloadingId.length === 0
+                    enabled: root.libraryPath.length > 0
                     onClicked: root.applySelected()
                 }
             }

@@ -491,15 +491,6 @@ Singleton {
             }
         },
         {
-            id: "music-recognition",
-            name: Translation.tr("Recognize Music"),
-            description: Translation.tr("Identify the currently playing song"),
-            icon: "music_note",
-            category: "tools",
-            keywords: ["shazam", "recognize", "music", "song", "identify", "songrec"],
-            execute: () => { SongRec.toggleRunning() }
-        },
-        {
             id: "open-notepad",
             name: Translation.tr("Open Notepad"),
             description: Translation.tr("Open the quick notepad in the sidebar"),
@@ -815,17 +806,6 @@ Singleton {
             keywords: ["family", "panel", "ii", "material", "layout"],
             execute: () => {
                 root.runLauncher(["panelFamily", "set", "ii"])
-            }
-        },
-        {
-            id: "switch-family-waffle",
-            name: Translation.tr("Switch to Waffle Panel Family"),
-            description: Translation.tr("Use the Windows 11 / Waffle panel layout"),
-            icon: "grid_view",
-            category: "settings",
-            keywords: ["family", "panel", "waffle", "win11", "windows", "layout"],
-            execute: () => {
-                root.runLauncher(["panelFamily", "set", "waffle"])
             }
         },
         {

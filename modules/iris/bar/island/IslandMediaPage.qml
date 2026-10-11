@@ -1,7 +1,6 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtQuick.Dialogs
 import QtQuick.Layouts
 import QtQuick.Shapes
 import Quickshell
@@ -41,7 +40,6 @@ GridLayout {
         positionUpdatesActive: page.current && page.island.visualExpanded
     }
 
-    readonly property bool anime: AnimeWatch.ownsPlayer(page.island.player)
     readonly property var otherPlayers: (MprisController.displayPlayers ?? []).filter(p => p && p !== page.island.player)
     readonly property var streams: {
         const groups = []
@@ -163,9 +161,9 @@ GridLayout {
                 glyph: "fast_rewind"
                 glyphSize: 26 * IrisStyle.density
                 implicitWidth: 44 * IrisStyle.density
-                enabled: page.anime || media.effectiveCanGoPrevious
-                Accessible.name: page.anime ? Translation.tr("Previous episode") : Translation.tr("Previous track")
-                onClicked: page.anime ? AnimeWatch.skip("previous") : media.previous()
+                enabled: media.effectiveCanGoPrevious
+                Accessible.name: Translation.tr("Previous track")
+                onClicked: media.previous()
             }
             GlyphButton {
                 glyph: media.effectiveIsPlaying ? "pause" : "play_arrow"
@@ -184,83 +182,13 @@ GridLayout {
                 glyph: "fast_forward"
                 glyphSize: 26 * IrisStyle.density
                 implicitWidth: 44 * IrisStyle.density
-                enabled: page.anime || media.effectiveCanGoNext
-                Accessible.name: page.anime ? Translation.tr("Next episode") : Translation.tr("Next track")
-                onClicked: page.anime ? AnimeWatch.skip("next") : media.next()
+                enabled: media.effectiveCanGoNext
+                Accessible.name: Translation.tr("Next track")
+                onClicked: media.next()
             }
                 }
             }
             Item { Layout.fillWidth: true }
-        }
-        ColumnLayout {
-            Layout.fillWidth: true
-            visible: page.anime
-            spacing: 8 * IrisStyle.density
-            Rectangle {
-                Layout.fillWidth: true
-                implicitHeight: 1
-                color: IrisStyle.hairline
-            }
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: 5 * IrisStyle.density
-                IrisText {
-                    text: Translation.tr("Subtitles")
-                    color: IrisStyle.textSecondary
-                    font.pixelSize: IrisStyle.typeMeta
-                }
-                Item { Layout.fillWidth: true }
-                AnimeChip {
-                    text: Translation.tr("Off")
-                    active: AnimeWatch.subtitleId <= 0
-                    onClicked: AnimeWatch.selectSubtitle(0)
-                }
-                Repeater {
-                    model: AnimeWatch.subtitles
-                    AnimeChip {
-                        required property var modelData
-                        required property int index
-                        text: AnimeWatch.subtitleLabel(modelData, index)
-                        active: AnimeWatch.subtitleId === Number(modelData.id)
-                        onClicked: AnimeWatch.selectSubtitle(Number(modelData.id))
-                    }
-                }
-                AnimeChip {
-                    glyph: "add"
-                    Accessible.name: Translation.tr("Load a subtitle file")
-                    onClicked: subtitleDialog.open()
-                }
-            }
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: 12 * IrisStyle.density
-                AnimeStepper {
-                    label: Translation.tr("Size")
-                    value: AnimeWatch.subtitleScale + "%"
-                    onLess: AnimeWatch.setSubtitleScale(AnimeWatch.subtitleScale - 10)
-                    onMore: AnimeWatch.setSubtitleScale(AnimeWatch.subtitleScale + 10)
-                }
-                AnimeStepper {
-                    label: Translation.tr("Sync")
-                    value: (AnimeWatch.subtitleDelay > 0 ? "+" : "") + AnimeWatch.subtitleDelay.toFixed(1) + " s"
-                    onLess: AnimeWatch.nudgeSubtitleDelay(-0.1)
-                    onMore: AnimeWatch.nudgeSubtitleDelay(0.1)
-                    onReset: AnimeWatch.resetSubtitleDelay()
-                }
-                Item { Layout.fillWidth: true }
-                AnimeChip {
-                    glyph: "replay_10"
-                    glyphSize: 17
-                    Accessible.name: Translation.tr("Back 10 seconds")
-                    onClicked: AnimeWatch.seekBy(-10)
-                }
-                AnimeChip {
-                    glyph: "fast_forward"
-                    text: Translation.tr("Skip OP")
-                    Accessible.name: Translation.tr("Skip 85 seconds")
-                    onClicked: AnimeWatch.seekBy(85)
-                }
-            }
         }
     }
 
@@ -346,97 +274,6 @@ GridLayout {
                     }
                 }
             }
-        }
-    }
-
-
-    FileDialog {
-        id: subtitleDialog
-        title: Translation.tr("Load subtitles")
-        fileMode: FileDialog.OpenFile
-        currentFolder: "file://" + Directories.homePath
-        nameFilters: [Translation.tr("Subtitles") + " (*.srt *.ass *.ssa *.vtt *.sub)", Translation.tr("All files") + " (*)"]
-        onAccepted: AnimeWatch.addSubtitle(String(selectedFile))
-    }
-
-    component AnimeChip: MouseArea {
-        id: chip
-        property string text: ""
-        property string glyph: ""
-        property real glyphSize: 14
-        property bool active: false
-        implicitWidth: chipRow.implicitWidth + Math.round((chip.text.length > 0 ? 18 : 12) * IrisStyle.density)
-        implicitHeight: Math.round(26 * IrisStyle.density)
-        hoverEnabled: true
-        cursorShape: Qt.PointingHandCursor
-        Accessible.role: Accessible.Button
-        Accessible.name: chip.text
-        Rectangle {
-            anchors.fill: parent
-            radius: height / 2
-            color: chip.active ? IrisStyle.tintFill(page.island.artTint)
-                : chip.pressed ? IrisStyle.fillActive : chip.containsMouse ? IrisStyle.fillHover : IrisStyle.fillQuiet
-            Behavior on color { ColorAnimation { duration: IrisStyle.duration(110); easing.type: IrisStyle.feedbackEasing } }
-        }
-        Row {
-            id: chipRow
-            anchors.centerIn: parent
-            spacing: Math.round(4 * IrisStyle.density)
-            Glyph {
-                visible: chip.glyph.length > 0
-                anchors.verticalCenter: parent.verticalCenter
-                text: chip.glyph
-                iconSize: chip.glyphSize * IrisStyle.density
-                color: chip.active ? page.island.artTint : IrisStyle.text
-            }
-            IrisText {
-                visible: chip.text.length > 0
-                anchors.verticalCenter: parent.verticalCenter
-                text: chip.text
-                color: chip.active ? page.island.artTint : IrisStyle.textSecondary
-                font.pixelSize: IrisStyle.typeFootnote
-                font.weight: IrisStyle.weight(Font.DemiBold)
-            }
-        }
-    }
-
-    component AnimeStepper: RowLayout {
-        id: stepper
-        property string label: ""
-        property string value: ""
-        signal less()
-        signal more()
-        signal reset()
-        spacing: Math.round(2 * IrisStyle.density)
-        IrisText {
-            Layout.alignment: Qt.AlignBaseline
-            text: stepper.label
-            color: IrisStyle.textSecondary
-            font.pixelSize: IrisStyle.typeMeta
-            rightPadding: Math.round(4 * IrisStyle.density)
-        }
-        GlyphButton {
-            glyph: "remove"
-            glyphSize: 15 * IrisStyle.density
-            implicitWidth: Math.round(24 * IrisStyle.density)
-            Accessible.name: Translation.tr("Less %1").arg(stepper.label)
-            onClicked: stepper.less()
-        }
-        Tabular {
-            Layout.alignment: Qt.AlignBaseline
-            text: stepper.value
-            font.pixelSize: IrisStyle.typeMeta
-            font.weight: IrisStyle.weight(Font.DemiBold)
-            horizontalAlignment: Text.AlignHCenter
-            Layout.minimumWidth: Math.round(40 * IrisStyle.density)
-            TapHandler { onTapped: stepper.reset() }
-        }
-        GlyphButton {
-            glyph: "add"
-            glyphSize: 15 * IrisStyle.density
-            implicitWidth: Math.round(24 * IrisStyle.density)
-            Accessible.name: Translation.tr("More %1").arg(stepper.label)
-            onClicked: stepper.more()
         }
     }
 }

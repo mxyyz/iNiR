@@ -5,7 +5,6 @@ import qs.services.deferred
 import qs.modules.common
 import qs.modules.common.functions
 import qs.modules.lock
-import qs.modules.waffle.lock
 import qs.modules.iris.lock
 import qs.modules.iris.style
 import QtQuick
@@ -163,7 +162,7 @@ Scope {
             // Unlock the keyring if configured to do so
             if (Config.options?.lock?.security?.unlockKeyring ?? true) root.unlockKeyring(); // Async
 
-            if (root._cachedUseIrisLock && IrisStyle.recedeDuration > 0) {
+            if (IrisStyle.recedeDuration > 0) {
                 root.irisUnlocking = true
                 irisRelease.restart()
                 return
@@ -207,58 +206,7 @@ Scope {
         }
     }
 
-    // Lock surface component - switches between Material (ii) and Windows 11 (waffle) styles
-    // Reactive binding - updates automatically when panelFamily changes (but only when unlocked)
-    readonly property bool useWaffleLock: Config.ready && !GlobalStates.screenLocked 
-        ? (Config.options?.panelFamily === "waffle")
-        : root._cachedUseWaffleLock
-    readonly property bool useIrisLock: Config.ready && !GlobalStates.screenLocked
-        ? (Config.options?.panelFamily === "iris")
-        : root._cachedUseIrisLock
-    
-    // Cache the last known value to prevent switching during lock
-    property bool _cachedUseWaffleLock: false
-    property bool _cachedUseIrisLock: false
-    
-    onUseWaffleLockChanged: {
-        if (!GlobalStates.screenLocked) {
-            root._cachedUseWaffleLock = root.useWaffleLock
-        }
-    }
-    onUseIrisLockChanged: {
-        if (!GlobalStates.screenLocked)
-            root._cachedUseIrisLock = root.useIrisLock
-    }
-    
-    Component.onCompleted: {
-        // Initialize cache.
-        if (Config.ready) {
-            root._cachedUseWaffleLock = Config.options?.panelFamily === "waffle"
-            root._cachedUseIrisLock = Config.options?.panelFamily === "iris"
-        }
-        root.initIfReady()
-    }
-    
-    Component {
-        id: iiLockComponent
-        LockSurface {
-            context: lockContext
-        }
-    }
-    
-    Component {
-        id: waffleLockComponent
-        WaffleLockSurface {
-            context: lockContext
-        }
-    }
-    
-    Component {
-        id: waffleLockSafeComponent
-        WaffleLockSurfaceSafe {
-            context: lockContext
-        }
-    }
+    Component.onCompleted: root.initIfReady()
 
     Component {
         id: irisLockComponent
@@ -283,14 +231,12 @@ Scope {
             Loader {
                 id: lockSurfaceLoader
                 active: GlobalStates.screenLocked && Config.ready
-                // The iRiS lock arrives from the wallpaper; an async first frame is a bare colour flash.
-                asynchronous: !root._cachedUseIrisLock
+                // The lock arrives from the wallpaper; an async first frame is a bare colour flash.
+                asynchronous: false
                 anchors.fill: parent
                 // Don't animate opacity - causes issues during hot-reload
                 opacity: active ? 1 : 0
-                sourceComponent: root._cachedUseWaffleLock
-                    ? (CompositorService.isNiri ? waffleLockSafeComponent : waffleLockComponent)
-                    : root._cachedUseIrisLock ? irisLockComponent : iiLockComponent
+                sourceComponent: irisLockComponent
                 
                 // Detect load errors
                 onStatusChanged: {
@@ -306,13 +252,13 @@ Scope {
                 
                 Binding {
                     target: lockSurfaceLoader.item
-                    when: root._cachedUseIrisLock && lockSurfaceLoader.item !== null
+                    when: lockSurfaceLoader.item !== null
                     property: "screenName"
                     value: lockSurface.screen?.name ?? ""
                 }
                 Binding {
                     target: lockSurfaceLoader.item
-                    when: root._cachedUseIrisLock && lockSurfaceLoader.item !== null
+                    when: lockSurfaceLoader.item !== null
                     property: "leaving"
                     value: root.irisUnlocking
                 }
@@ -342,8 +288,7 @@ Scope {
                 onTriggered: {
                     console.warn("[Lock] Lock surface failed to load after 2s — status:",
                                  lockSurfaceLoader.status, "active:", lockSurfaceLoader.active,
-                                 "Config.ready:", Config.ready, "waffle:", root._cachedUseWaffleLock,
-                                 "iris:", root._cachedUseIrisLock,
+                                 "Config.ready:", Config.ready,
                                  "isNiri:", CompositorService.isNiri)
                     root.useFallbackLock()
                 }

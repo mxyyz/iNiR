@@ -10,9 +10,6 @@ Item {
     property string icon: ""
     property string title: ""
     property string description: ""
-    // Optional mascot pose shown instead of the icon (gated by mascot.enable;
-    // the icon is the switched-off fallback)
-    property string mascotPose: ""
     property int shape: MaterialShape.Shape.Clover4Leaf
     property int descriptionHorizontalAlignment: Text.AlignLeft
 
@@ -33,19 +30,9 @@ Item {
         width: Appearance.editorialEverywhere ? Math.max(0, Math.min(340, root.width - 24)) : implicitWidth
         spacing: Appearance.editorialEverywhere ? Math.round(12 * Appearance.editorial.spacing) : Appearance.inirEverywhere ? 8 : 5
 
-        MascotImage {
-            id: placeholderMascot
-            visible: active && root.mascotPose.length > 0
-            Layout.alignment: Qt.AlignHCenter
-            Layout.preferredWidth: 110
-            Layout.preferredHeight: 110
-            pose: root.mascotPose
-            surface: "emptyStates"
-        }
-
         // Inir: simple rectangle with centered icon
         Item {
-            visible: (Appearance.inirEverywhere || (Appearance.editorialEverywhere && !Appearance.editorial.ornaments)) && !placeholderMascot.visible
+            visible: (Appearance.inirEverywhere || (Appearance.editorialEverywhere && !Appearance.editorial.ornaments))
             Layout.alignment: Qt.AlignHCenter
             width: 72
             height: 72
@@ -68,7 +55,7 @@ Item {
 
         // Material/Aurora: decorative shape wrapper
         MaterialShapeWrappedMaterialSymbol {
-            visible: !Appearance.inirEverywhere && (!Appearance.editorialEverywhere || Appearance.editorial.ornaments) && !placeholderMascot.visible
+            visible: !Appearance.inirEverywhere && (!Appearance.editorialEverywhere || Appearance.editorial.ornaments)
             Layout.alignment: Qt.AlignHCenter
             text: root.icon
             shape: root.shape

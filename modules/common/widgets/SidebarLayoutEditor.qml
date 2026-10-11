@@ -35,7 +35,6 @@ ColumnLayout {
         translator: { icon: "translate", label: Translation.tr("Translator") },
         anime: { icon: "bookmark_heart", label: Translation.tr("Anime") },
         animeSchedule: { icon: "calendar_month", label: Translation.tr("Schedule") },
-        wallhaven: { icon: "collections", label: Translation.tr("Wallhaven") },
         news: { icon: "newspaper", label: Translation.tr("News") },
         ytmusic: { icon: "library_music", label: Translation.tr("YT Music") },
         tools: { icon: "build", label: Translation.tr("Tools") },

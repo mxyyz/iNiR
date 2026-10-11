@@ -21,7 +21,7 @@ registry through a dangling pointer in the extensions hash.
 
 Simpler shells rarely hit this because they have few singletons and no
 uninstantiated components at reload time.  iNiR's panel family system (ii vs
-waffle) and 50+ IPC handlers make the race virtually guaranteed.
+iris) and 50+ IPC handlers make the race virtually guaranteed.
 
 **Fix:** Move extension deletion into the `root->destroyed` callback so
 extensions outlive the root.  The no-root branch keeps immediate deletion

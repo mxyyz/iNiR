@@ -27,7 +27,6 @@ Singleton {
     // (backdrop click / focus loss) and yield keyboard focus — e.g. the InnerTune
     // device-flow login, where the user must type a code into an external browser.
     property bool sidebarLeftHoldOpen: false
-    property bool aiChatDetached: false
     property bool sidebarRightOpen: false
     property string sidebarRightTargetOutput: ""
     property bool mediaControlsOpen: false
@@ -115,54 +114,20 @@ Singleton {
         Object.keys(root._settingsNativeDialogs).length > 0
 
     function openSettingsPage(index: int, section): void {
-        const requestedSection = String(section ?? "")
-        const isWaffle = Config.options?.panelFamily === "waffle"
-            && Config.options?.waffles?.settings?.useMaterialStyle !== true
-        if (isWaffle) {
-            Quickshell.execDetached([Quickshell.shellPath("scripts/inir"),
-                "waffle-settings-window"])
-        } else if (Config.options?.panelFamily === "iris" || (Config.options?.settingsUi?.overlayMode ?? false)) {
-            root.settingsOverlayRequestedPage = index
-            root.settingsOverlayRequestedSection = requestedSection
-            if (root.settingsOverlayOpen) root.settingsRaiseRequest++
-            root.settingsOverlayOpen = true
-        } else {
-            const args = ["/usr/bin/env", `QS_SETTINGS_PAGE=${index}`]
-            if (requestedSection.length > 0)
-                args.push(`QS_SETTINGS_SECTION=${requestedSection}`)
-            args.push(Quickshell.shellPath("scripts/inir"), "settings-window")
-            Quickshell.execDetached(args)
-        }
+        root.settingsOverlayRequestedPage = index
+        root.settingsOverlayRequestedSection = String(section ?? "")
+        if (root.settingsOverlayOpen) root.settingsRaiseRequest++
+        root.settingsOverlayOpen = true
     }
 
     function openSettings(): void {
-        const isWaffle = Config.options?.panelFamily === "waffle"
-            && Config.options?.waffles?.settings?.useMaterialStyle !== true
-        if (isWaffle) {
-            Quickshell.execDetached([Quickshell.shellPath("scripts/inir"),
-                "waffle-settings-window"])
-        } else if (Config.options?.panelFamily === "iris" || (Config.options?.settingsUi?.overlayMode ?? false)) {
-            if (root.settingsOverlayOpen) root.settingsRaiseRequest++
-            root.settingsOverlayOpen = true
-        } else {
-            Quickshell.execDetached([Quickshell.shellPath("scripts/inir"),
-                "settings-window"])
-        }
+        if (root.settingsOverlayOpen) root.settingsRaiseRequest++
+        root.settingsOverlayOpen = true
     }
 
     function toggleSettings(): void {
-        const isWaffle = Config.options?.panelFamily === "waffle"
-            && Config.options?.waffles?.settings?.useMaterialStyle !== true
-        if (isWaffle) {
-            Quickshell.execDetached([Quickshell.shellPath("scripts/inir"),
-                "waffle-settings-window", "--toggle"])
-        } else if (Config.options?.panelFamily === "iris" || (Config.options?.settingsUi?.overlayMode ?? false)) {
-            if (root.settingsOverlayOpen && root.settingsWindowBehind) root.settingsRaiseRequest++
-            else root.settingsOverlayOpen = !root.settingsOverlayOpen
-        } else {
-            Quickshell.execDetached([Quickshell.shellPath("scripts/inir"),
-                "settings-window", "--toggle"])
-        }
+        if (root.settingsOverlayOpen && root.settingsWindowBehind) root.settingsRaiseRequest++
+        else root.settingsOverlayOpen = !root.settingsOverlayOpen
     }
 
     function setSettingsNativeDialogVisible(dialogKey: string, visible: bool): void {
@@ -230,7 +195,6 @@ Singleton {
     property string wallpaperSelectorKind: ""
     // `inir wallpaperSelector move <step>`: the gallery moves its selection as the arrow keys do.
     signal wallpaperSelectorMoveRequested(int step)
-    property var wallpaperSelectorSeries: null
     property string wallpaperSelectorKindActive: "all"
     property bool wallpaperLauncherOpen: false
     property string wallpaperLauncherMode: "static"
@@ -306,7 +270,7 @@ Singleton {
     // Dialog requests from other panels (e.g. left sidebar → right sidebar)
     property bool requestWifiDialog: false
     property bool requestBluetoothDialog: false
-    // Selection targets: "main", "backdrop", "waffle", "waffle-backdrop"
+    // Selection targets: "main", "backdrop"
     property string wallpaperSelectionTarget: "main"
     // Target monitor for wallpaper selector (set before opening, avoids config timing issues)
     property string wallpaperSelectorTargetMonitor: ""
@@ -493,16 +457,8 @@ Singleton {
     property string irisIslandPage: ""
     property bool dashboardOpen: false
     property bool workspaceShowNumbers: false
-    property var activeBooruImageMenu: null  // Track which BooruImage has its menu open
     property var activeTaskViewMenu: null  // Track which WindowThumbnail has its menu open
-    // Waffle-specific states
     property bool searchOpen: false
-    property bool waffleActionCenterOpen: false
-    property bool waffleNotificationCenterOpen: false
-    property bool waffleWidgetsOpen: false
-    property bool waffleAltSwitcherOpen: false
-    property bool waffleClipboardOpen: false
-    property bool waffleTaskViewOpen: false
     // Panel family transition animation state
     property bool familyTransitionActive: false
     property string familyTransitionDirection: "left" // "left" = current exits left, new enters from right
@@ -705,63 +661,8 @@ Singleton {
                 root.sidebarScreenList)
     }
 
-    // Close other waffle popups when one opens (unless allowMultiplePanels is enabled)
-    property bool _allowMultiple: Config.options?.waffles?.behavior?.allowMultiplePanels ?? false
     onSearchOpenChanged: {
         if (searchOpen) irisOrbitOpen = false
-        if (searchOpen && !_allowMultiple) {
-            waffleActionCenterOpen = false
-            waffleNotificationCenterOpen = false
-            waffleWidgetsOpen = false
-            waffleClipboardOpen = false
-        }
-    }
-    onWaffleActionCenterOpenChanged: {
-        if (waffleActionCenterOpen && !_allowMultiple) {
-            searchOpen = false
-            waffleNotificationCenterOpen = false
-            waffleWidgetsOpen = false
-            waffleClipboardOpen = false
-        }
-    }
-    onWaffleNotificationCenterOpenChanged: {
-        if (waffleNotificationCenterOpen) {
-            if (!_allowMultiple) {
-                searchOpen = false
-                waffleActionCenterOpen = false
-                waffleWidgetsOpen = false
-                waffleClipboardOpen = false
-            }
-            // Mark notifications as read when opening notification center
-            Notifications.timeoutAll();
-            Notifications.markAllRead();
-        }
-    }
-    onWaffleWidgetsOpenChanged: {
-        if (waffleWidgetsOpen && !_allowMultiple) {
-            searchOpen = false
-            waffleActionCenterOpen = false
-            waffleNotificationCenterOpen = false
-            waffleClipboardOpen = false
-        }
-    }
-    onWaffleClipboardOpenChanged: {
-        if (waffleClipboardOpen && !_allowMultiple) {
-            searchOpen = false
-            waffleActionCenterOpen = false
-            waffleNotificationCenterOpen = false
-            waffleWidgetsOpen = false
-            waffleTaskViewOpen = false
-        }
-    }
-    onWaffleTaskViewOpenChanged: {
-        if (waffleTaskViewOpen && !_allowMultiple) {
-            searchOpen = false
-            waffleActionCenterOpen = false
-            waffleNotificationCenterOpen = false
-            waffleWidgetsOpen = false
-            waffleClipboardOpen = false
-        }
     }
 
     onSidebarRightOpenChanged: {

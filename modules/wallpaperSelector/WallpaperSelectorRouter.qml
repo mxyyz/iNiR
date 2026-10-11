@@ -113,12 +113,8 @@ Scope {
         const explicitMonitor = GlobalStates.wallpaperSelectorTargetMonitor
             || (Config.options?.wallpaperSelector?.targetMonitor ?? "")
         const explicitTarget = Config.options?.wallpaperSelector?.selectionTarget ?? "main"
-        if (!explicitMonitor && explicitTarget === "main") {
-            if (Config.options?.panelFamily === "waffle") {
-                const useMain = Config.options?.waffles?.background?.useMainWallpaper ?? true
-                Config.setNestedValue("wallpaperSelector.selectionTarget", useMain ? "main" : "waffle")
-            } else Config.setNestedValue("wallpaperSelector.selectionTarget", "main")
-        }
+        if (!explicitMonitor && explicitTarget === "main")
+            Config.setNestedValue("wallpaperSelector.selectionTarget", "main")
         if (explicitMonitor)
             root._openWithMonitor(explicitMonitor)
         else
@@ -213,7 +209,7 @@ Scope {
         function preview(path: string): void { Wallpapers.previewWallpaper(path, "") }
         function cancelPreview(): void { Wallpapers.cancelWallpaperPreview() }
         function browse(source: string, query: string): void {
-            GlobalStates.wallpaperSelectorSource = ["library", "wallhaven", "konachan", "yandere", "live"].includes(source) ? source : "library"
+            GlobalStates.wallpaperSelectorSource = "library"
             GlobalStates.wallpaperSelectorQuery = query === "-" ? "" : query
             if (GlobalStates.wallpaperSelectorOpen) return
             if (!GlobalStates.wallpaperLauncherOpen && !GlobalStates.coverflowSelectorOpen)

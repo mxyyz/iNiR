@@ -42,7 +42,7 @@ IconToolbarButton {
     opacity: enabled ? 1 : 0.38
 
     // Do not bind a property to itself for the non-iRiS branch. These temporary
-    // overrides preserve the inherited Material/Waffle bindings and restore them
+    // overrides preserve the inherited Material bindings and restore them
     // if the family changes without rebuilding the component.
     Binding { target: root; property: "buttonRadius"; value: root.height / 2; when: root.iris; restoreMode: Binding.RestoreBinding }
     Binding {

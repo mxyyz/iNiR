@@ -16,14 +16,11 @@ MouseArea {
     required property int index
     property string key: ""
     property string filePath: ""
-    property string imageUrl: ""
     property string motionSource: ""
     property bool video: false
-    property string quality: ""
     property string label: ""
     property bool selected: false
     property bool current: false
-    property bool busy: false
     signal committed()
 
     readonly property real d: IrisStyle.density
@@ -64,13 +61,6 @@ MouseArea {
                     mipmap: true
                 }
             }
-            IrisImage {
-                anchors.fill: parent
-                visible: root.imageUrl.length > 0
-                source: root.imageUrl
-                opacity: status === Image.Ready ? 1 : 0
-                Behavior on opacity { NumberAnimation { duration: IrisStyle.duration(180); easing.type: IrisStyle.feedbackEasing } }
-            }
             Loader {
                 anchors.fill: parent
                 active: root.playing
@@ -108,31 +98,22 @@ MouseArea {
                     iconSize: Math.round(13 * root.d)
                     color: IrisStyle.onMedia
                 }
-                IrisText {
-                    anchors.verticalCenter: parent.verticalCenter
-                    visible: root.quality.length > 0
-                    text: root.quality
-                    color: IrisStyle.onMedia
-                    font.family: IrisStyle.fontNumbers
-                    font.pixelSize: IrisStyle.typeFootnote
-                    font.weight: IrisStyle.weight(Font.Bold)
-                }
             }
         }
 
         Rectangle {
-            visible: root.current || root.busy
+            visible: root.current
             x: tile.x + tile.width - width - Math.round(6 * root.d)
             y: tile.y + Math.round(6 * root.d)
             width: Math.round(22 * root.d)
             height: width
             radius: width / 2
-            color: root.busy ? IrisStyle.surface : IrisStyle.accent
+            color: IrisStyle.accent
             MaterialSymbol {
                 anchors.centerIn: parent
-                text: root.busy ? "downloading" : "check"
+                text: "check"
                 iconSize: Math.round(14 * root.d)
-                color: root.busy ? IrisStyle.accent : IrisStyle.inkOnAccent
+                color: IrisStyle.inkOnAccent
             }
         }
     }

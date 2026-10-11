@@ -15,7 +15,6 @@ ContentPage {
     settingsPageName: Translation.tr("Background")
 
     property bool isIiActive: (Config.options?.panelFamily ?? "ii") === "ii"
-    property bool isWaffleActive: Config.options?.panelFamily === "waffle"
     property string activeSection: "source"
     readonly property bool screensTaskActive: root.isIiActive && root.activeSection === "screens"
 
@@ -64,23 +63,6 @@ ContentPage {
         Config.setNestedValue("background.parallax.panelShift", preset.panelShift)
         Config.setNestedValue("background.parallax.widgetDepth", preset.widgetDepth)
         Config.setNestedValue("background.parallax.widgetsFactor", preset.widgetDepth)
-    }
-
-    SettingsCardSection {
-        visible: root.isWaffleActive
-        expanded: true
-        icon: "info"
-        title: Translation.tr("Waffle Mode")
-
-        SettingsGroup {
-            StyledText {
-                Layout.fillWidth: true
-                text: Translation.tr("You're using Waffle style. Most background settings are in the Waffle Style page. Only the Backdrop section below applies to both styles.")
-                color: Appearance.colors.colSubtext
-                font.pixelSize: Appearance.font.pixelSize.small
-                wrapMode: Text.WordWrap
-            }
-        }
     }
 
     SettingsTaskLoader {

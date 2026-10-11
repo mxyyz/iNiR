@@ -250,7 +250,7 @@ inir doctor                     # auto-diagnose and fix
 inir update                     # pull + migrate + restart
 ```
 
-**Distros suportadas:** Arch; este fork também adiciona um caminho automatizado e validado para Void Linux glibc + runit via XBPS. Veja [VOID.md](../VOID.md) para Void e [PACKAGES.md](../PACKAGES.md) para pacotes.
+**Distros suportadas:** Arch. [PACKAGES.md](../PACKAGES.md)
 
 Outras formas de instalar, se `./setup install` não for o que você quer:
 

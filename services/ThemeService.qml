@@ -23,7 +23,6 @@ Singleton {
     readonly property var wallpaperThemingCfg: Config.options?.appearance?.wallpaperTheming ?? null
     readonly property var terminalAdjCfg: wallpaperThemingCfg?.terminalColorAdjustments ?? null
     readonly property string panelFamily: Config.options?.panelFamily ?? "ii"
-    readonly property bool waffleUsesMainWallpaper: Config.options?.waffles?.background?.useMainWallpaper ?? true
     // What iRiS asks of the system's mode and of the apps' surfaces: both are read by switchwall.sh, so a change regenerates.
     readonly property string irisSchemeChoice: panelFamily === "iris" ? String(Config.options?.iris?.appearance?.scheme ?? "auto") : "auto"
     readonly property bool irisMaterialApps: panelFamily === "iris" && (Config.options?.iris?.appearance?.materialForApps ?? true)
@@ -38,7 +37,6 @@ Singleton {
     readonly property string liveRegenSignature: JSON.stringify({
         theme: currentTheme,
         panelFamily: root.panelFamily,
-        waffleUsesMainWallpaper: root.waffleUsesMainWallpaper,
         paletteType: Config.options?.appearance?.palette?.type ?? "auto",
         themingWallpaperPath: Wallpapers.effectiveWallpaperPath ?? "",
         enableAppsAndShell: wallpaperThemingCfg?.enableAppsAndShell ?? true,
@@ -115,9 +113,8 @@ Singleton {
     // ── Global style ────────────────────────────────────────────────────
     // Single owner of "what does selecting style X write to config". This
     // lived in three places (both settings families and the action registry)
-    // that had already drifted: waffle ignored the per-style corner defaults
-    // entirely, and the action registry had no cookie branch at all, so cookie
-    // silently inherited material's corner style.
+    // that had already drifted: the action registry had no cookie branch at
+    // all, so cookie silently inherited material's corner style.
 
     function cornerStyleForGlobalStyle(styleId: string): int {
         const styles = Config.options?.appearance?.globalStyleCornerStyles

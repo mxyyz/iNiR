@@ -14,19 +14,18 @@ Item {
     component CriticalPanelLoader: LazyLoader {
         required property string identifier
         property bool extraCondition: true
-        active: Config.ready && IrisGate.official
+        active: Config.ready
             && (Config.options?.enabledPanels ?? []).includes(identifier)
             && extraCondition
     }
 
     CriticalPanelLoader {
         identifier: "irisBackground"
-        extraCondition: !(Config.options?.iris?.modules?.desktopWidgets ?? true)
         component: IrisBackground {}
     }
 
     LazyLoader {
-        active: Config.ready && IrisGate.official
+        active: Config.ready
         component: IrisReservations {}
     }
 

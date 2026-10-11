@@ -234,20 +234,6 @@ Scope {
                         animation: NumberAnimation { duration: Appearance.animation.elementMoveFast.duration; easing.type: Appearance.animation.elementMoveFast.type; easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve }
                     }
 
-                    MascotImage {
-                        anchors.bottom: parent.bottom
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        visible: active && navRail.expanded
-                        width: navRail.expanded ? 130 : 54
-                        height: width
-                        surface: "cheatsheet"
-                        pose: "cheatsheet-sensei"
-                        Behavior on width {
-                            enabled: Appearance.animationsEnabled
-                            animation: NumberAnimation { duration: Appearance.animation.elementMoveFast.duration; easing.type: Appearance.animation.elementMoveFast.type; easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve }
-                        }
-                    }
-
                     NavigationRail {
                         id: navRail
                         anchors {

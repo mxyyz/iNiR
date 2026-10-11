@@ -22,9 +22,6 @@ IrisWidgetFace {
     readonly property string art: root.hasPlayer ? media.displayedArtFilePath : ""
     readonly property color artLight: IrisStyle.vividHighlight(media.colorQuantizer?.colors?.[0] ?? root.accent, root.accent)
     readonly property real progress: media.effectiveLength > 0 ? Math.min(1, media.effectivePosition / media.effectiveLength) : 0
-    readonly property bool lyricsWanted: root.large && root.live && root.hasPlayer
-        && Boolean(root.widget.irisOption("lyrics", true))
-    readonly property bool lyricsReady: root.lyricsWanted && LyricsService.status === "ok" && LyricsService.lyricsLines.length > 0
     readonly property string source: {
         const identity = String(root.player?.identity || String(root.player?.desktopEntry ?? "").split(".").pop() || "")
         return identity.length > 0 ? identity.charAt(0).toUpperCase() + identity.slice(1) : Translation.tr("Music")
@@ -34,8 +31,6 @@ IrisWidgetFace {
         : root.artLight
     padding: root.small && root.art.length > 0 ? 0 : root.dp(16)
 
-    onLyricsWantedChanged: root.lyricsWanted ? LyricsService.subscribe() : LyricsService.unsubscribe()
-    Component.onDestruction: if (root.lyricsWanted) LyricsService.unsubscribe()
 
     Timer {
         id: restDelay
@@ -297,7 +292,7 @@ IrisWidgetFace {
                 source: root.art
                 circular: false
                 radius: root.innerRadius
-                Layout.preferredWidth: root.dp(root.lyricsReady ? 112 : 148)
+                Layout.preferredWidth: root.dp(148)
                 Layout.preferredHeight: Layout.preferredWidth
             }
             ColumnLayout {
@@ -335,41 +330,6 @@ IrisWidgetFace {
             Layout.fillHeight: true
             spacing: root.dp(4)
 
-            Item { Layout.fillHeight: true }
-            FaceText {
-                face: root
-                Layout.fillWidth: true
-                visible: root.lyricsWanted && LyricsService.status === "offline"
-                text: Translation.tr("Lyrics need an internet connection")
-                color: root.inkTertiary
-                size: 12.5
-            }
-            FaceText {
-                face: root
-                Layout.fillWidth: true
-                visible: root.lyricsReady
-                text: LyricsService.slots[2] ?? ""
-                color: root.inkTertiary
-                size: 12.5
-            }
-            FaceText {
-                face: root
-                Layout.fillWidth: true
-                text: LyricsService.slots[3] || "♪"
-                visible: root.lyricsReady
-                size: 16
-                weight: Font.DemiBold
-                wrapMode: Text.Wrap
-                maximumLineCount: 2
-            }
-            FaceText {
-                face: root
-                Layout.fillWidth: true
-                visible: root.lyricsReady
-                text: LyricsService.slots[4] ?? ""
-                color: root.inkTertiary
-                size: 12.5
-            }
             Item { Layout.fillHeight: true }
         }
 

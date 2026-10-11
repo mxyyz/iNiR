@@ -10,7 +10,6 @@ depends=(
   ttf-dejavu
   ttf-liberation
   ttf-roboto
-  songrec
   translate-shell
   
   # gsettings

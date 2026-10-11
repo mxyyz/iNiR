@@ -264,7 +264,7 @@ inir update                     # pull + migrate + restart
 
 </div>
 
-**التوزيعات المدعومة:** Arch، ويضيف هذا الفرع دعماً آلياً ومختبراً لـ Void Linux glibc + runit عبر XBPS. راجع [VOID.md](../VOID.md) لتعليمات Void و[PACKAGES.md](../PACKAGES.md) لباقي الحزم.
+**التوزيعات المدعومة:** Arch. [PACKAGES.md](../PACKAGES.md)
 
 طرق أخرى، إن لم يكن `./setup install` ما تريده:
 

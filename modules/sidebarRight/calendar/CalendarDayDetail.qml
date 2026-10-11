@@ -272,19 +272,8 @@ Item {
             visible: !root.hasEvents
             spacing: 8
 
-            MascotImage {
-                id: noEventsMascot
-                Layout.alignment: Qt.AlignHCenter
-                Layout.preferredWidth: 88
-                Layout.preferredHeight: 88
-                surface: "calendar"
-                fallbackSurface: "emptyStates"
-                pose: "calendar-star-mark"
-            }
-
             MaterialSymbol {
                 Layout.alignment: Qt.AlignHCenter
-                visible: !noEventsMascot.active
                 text: "event_busy"
                 iconSize: 32
                 color: root.colSubtext

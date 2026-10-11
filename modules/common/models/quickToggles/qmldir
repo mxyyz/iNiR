@@ -11,7 +11,6 @@ GameModeToggle 1.0 GameModeToggle.qml
 HotspotToggle 1.0 HotspotToggle.qml
 IdleInhibitorToggle 1.0 IdleInhibitorToggle.qml
 MicToggle 1.0 MicToggle.qml
-MusicRecognitionToggle 1.0 MusicRecognitionToggle.qml
 NetworkToggle 1.0 NetworkToggle.qml
 NightLightToggle 1.0 NightLightToggle.qml
 NotificationToggle 1.0 NotificationToggle.qml

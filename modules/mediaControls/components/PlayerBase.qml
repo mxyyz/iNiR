@@ -11,7 +11,7 @@ import qs.services
 
 /**
  * PlayerBase - Shared logic for all media player presets
- * Handles art download, color extraction, YtMusic detection, and player state
+ * Handles art download, color extraction, and player state
  */
 QtObject {
     id: root
@@ -21,44 +21,19 @@ QtObject {
     property int slideDirection: 1
     property bool positionUpdatesActive: true
     
-    // YtMusic detection
-    readonly property bool isYtMusicPlayer: {
-        if (!player) return false
-        if (YtMusic.mpvPlayer && player === YtMusic.mpvPlayer) return true
-        return MprisController._isYtMusicMpv(player)
-    }
-    
-    // Effective properties (YtMusic or regular player)
-    readonly property string effectiveTitle: isYtMusicPlayer 
-        ? YtMusic.currentTitle 
-        : (MprisController.titleOf(player) ?? "")
-    readonly property string effectiveArtist: isYtMusicPlayer 
-        ? YtMusic.currentArtist 
-        : (MprisController.artistOf(player) ?? "")
-    readonly property string effectiveArtUrl: isYtMusicPlayer
-        ? YtMusic.currentThumbnail
-        : MprisController.effectiveArtUrl(player)
+    // Effective properties
+    readonly property string effectiveTitle: (MprisController.titleOf(player) ?? "")
+    readonly property string effectiveArtist: (MprisController.artistOf(player) ?? "")
+    readonly property string effectiveArtUrl: MprisController.effectiveArtUrl(player)
     // Artwork motion is keyed only by real art identity. Metadata-only updates
     // must not move the cover, or one track change animates twice.
     readonly property string mediaTransitionKey: (root.effectiveArtUrl ?? "").split("?")[0].split("#")[0]
-    readonly property real effectivePosition: isYtMusicPlayer 
-        ? YtMusic.currentPosition 
-        : MprisController.positionOf(player)
-    readonly property real effectiveLength: isYtMusicPlayer 
-        ? YtMusic.currentDuration 
-        : MprisController.lengthOf(player)
-    readonly property bool effectiveIsPlaying: isYtMusicPlayer 
-        ? YtMusic.isPlaying 
-        : (player?.isPlaying ?? false)
-    readonly property bool effectiveCanSeek: isYtMusicPlayer 
-        ? YtMusic.canSeek 
-        : (player?.canSeek ?? false)
-    readonly property bool effectiveCanGoPrevious: isYtMusicPlayer
-        ? YtMusic.canGoPrevious
-        : MprisController.canGoPreviousForPlayer(root.player)
-    readonly property bool effectiveCanGoNext: isYtMusicPlayer
-        ? YtMusic.canGoNext
-        : MprisController.canGoNextForPlayer(root.player)
+    readonly property real effectivePosition: MprisController.positionOf(player)
+    readonly property real effectiveLength: MprisController.lengthOf(player)
+    readonly property bool effectiveIsPlaying: (player?.isPlaying ?? false)
+    readonly property bool effectiveCanSeek: (player?.canSeek ?? false)
+    readonly property bool effectiveCanGoPrevious: MprisController.canGoPreviousForPlayer(root.player)
+    readonly property bool effectiveCanGoNext: MprisController.canGoNextForPlayer(root.player)
     
     // Art download management
     property string artDownloadLocation: Directories.coverArt
@@ -87,11 +62,7 @@ QtObject {
     
     // Player actions
     function togglePlaying(): void {
-        if (isYtMusicPlayer) {
-            YtMusic.togglePlaying()
-        } else {
-            player?.togglePlaying()
-        }
+        player?.togglePlaying()
     }
     
     function previous(): void {
@@ -105,9 +76,7 @@ QtObject {
     }
     
     function seek(seconds: real): void {
-        if (isYtMusicPlayer) {
-            YtMusic.seek(seconds)
-        } else if (player) {
+        if (player) {
             MprisController.seek(player, seconds)
         }
     }
@@ -138,8 +107,7 @@ QtObject {
         target: root.player
 
         function onTrackArtUrlChanged(): void {
-            if (!root.isYtMusicPlayer)
-                artRefreshTimer.restart()
+            artRefreshTimer.restart()
         }
 
         function onTrackTitleChanged(): void {
@@ -155,25 +123,6 @@ QtObject {
         }
     }
 
-    property var ytMusicConnections: Connections {
-        target: YtMusic
-
-        function onCurrentThumbnailChanged(): void {
-            if (root.isYtMusicPlayer)
-                artRefreshTimer.restart()
-        }
-
-        function onCurrentTitleChanged(): void {
-            if (root.isYtMusicPlayer)
-                artRefreshTimer.restart()
-        }
-
-        function onCurrentArtistChanged(): void {
-            if (root.isYtMusicPlayer)
-                artRefreshTimer.restart()
-        }
-    }
-    
     // Internal components
     property var artworkResolver: MediaArtworkResolver {
         sourceUrl: root.effectiveArtUrl

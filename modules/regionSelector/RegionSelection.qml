@@ -3,7 +3,6 @@ import qs
 import qs.modules.common
 import qs.modules.common.functions
 import qs.modules.common.widgets
-import qs.modules.waffle.regionSelector as WaffleRegion
 import qs.modules.iris.regionSelector as IrisRegion
 import qs.modules.iris.style
 import qs.services
@@ -401,17 +400,6 @@ PanelWindow {
             case RegionSelection.SnipAction.CharRecognition: {
                 const ocrLanguage = String(Config.options?.regionSelector?.ocrLanguage ?? "auto");
                 const ocrRunner = StringUtils.shellSingleQuoteEscape(Quickshell.shellPath("scripts/ocr-runner.sh"));
-                const japaneseLookup = Config.options?.regionSelector?.japaneseLookup?.enabled ?? true;
-                if (japaneseLookup && (ocrLanguage === "jpn" || ocrLanguage === "jpn_vert" || ocrLanguage.startsWith("jpn+"))) {
-                    japaneseOcrProc.lookupX = root.regionX;
-                    japaneseOcrProc.lookupY = root.regionY;
-                    japaneseOcrProc.lookupWidth = root.regionWidth;
-                    japaneseOcrProc.lookupHeight = root.regionHeight;
-                    japaneseOcrProc.command = ["/usr/bin/bash", "-c", `${cropInPlace} && '${ocrRunner}' '${StringUtils.shellSingleQuoteEscape(root.screenshotPath)}' '${StringUtils.shellSingleQuoteEscape(ocrLanguage)}'; _ocr_status=$?; ${cleanup}; exit $_ocr_status`];
-                    root.visible = false;
-                    japaneseOcrProc.running = true;
-                    return;
-                }
                 snipProc.command = ["/usr/bin/bash", "-c", `${cropInPlace} && { '${ocrRunner}' '${StringUtils.shellSingleQuoteEscape(root.screenshotPath)}' '${StringUtils.shellSingleQuoteEscape(ocrLanguage)}' | tee >('${clipboardCopy}' --primary) | '${clipboardCopy}'; _ocr_status=\${PIPESTATUS[0]}; ${cleanup}; if (( _ocr_status == 0 )); then /usr/bin/notify-send "Text recognized" "OCR text copied to clipboard" -a "OCR" -i edit-find -t 3000; else /usr/bin/notify-send "OCR failed" "The selected OCR language is unavailable or recognition failed" -a "OCR" -i dialog-error -t 4000; exit \$_ocr_status; fi; }`];
                 break;
             }
@@ -445,41 +433,6 @@ PanelWindow {
 
     Process {
         id: snipProc
-    }
-
-    Process {
-        id: japaneseOcrProc
-        property real lookupX: 0
-        property real lookupY: 0
-        property real lookupWidth: 0
-        property real lookupHeight: 0
-        property string recognizedText: ""
-        stdout: StdioCollector {
-            id: japaneseOcrOut
-            onStreamFinished: {
-                const recognized = (japaneseOcrOut.text ?? "").trim();
-                japaneseOcrProc.recognizedText = recognized;
-                if (recognized.length > 0) {
-                    const clipboardCopy = Quickshell.shellPath("scripts/clipboard-copy.sh");
-                    Quickshell.execDetached([clipboardCopy, recognized]);
-                    Quickshell.execDetached([clipboardCopy, "--primary", recognized]);
-                    JapaneseDictionary.lookupText(recognized, root.screen.name, japaneseOcrProc.lookupX, japaneseOcrProc.lookupY, japaneseOcrProc.lookupWidth, japaneseOcrProc.lookupHeight);
-                }
-            }
-        }
-        stderr: StdioCollector { id: japaneseOcrErr }
-        onExited: (exitCode) => {
-            if (exitCode === 0 && japaneseOcrProc.recognizedText.length > 0) {
-                Quickshell.execDetached(["notify-send", "Japanese OCR", "Text recognized; opening dictionary", "-a", "iNiR", "-t", "1800"]);
-            } else if (exitCode === 0) {
-                Quickshell.execDetached(["notify-send", "OCR", "No text was recognized in the selected region", "-a", "iNiR", "-t", "3500"]);
-            } else {
-                const detail = (japaneseOcrErr.text ?? "").trim();
-                const message = detail.length > 0 ? detail : Translation.tr("Japanese text recognition failed");
-                Quickshell.execDetached(["notify-send", "OCR failed", message, "-a", "iNiR", "-t", "5000"]);
-            }
-            root.dismiss();
-        }
     }
 
     // Crops the selected region to a temp file for the native annotation editor,
@@ -658,39 +611,26 @@ PanelWindow {
                 implicitHeight: controlsLoader.implicitHeight
                 opacity: 0
                 
-                readonly property bool useWaffle: Config.options?.panelFamily === "waffle"
-
-                // Position: waffle = top center, material and iRiS = bottom center
-                readonly property real restTopMargin: 16 + (root.shellInsets.top ?? 0)
+                // Position: bottom center
                 readonly property real restBottomMargin: 8 + (root.shellInsets.bottom ?? 0)
 
                 anchors {
                     horizontalCenter: parent.horizontalCenter
-                    top: useWaffle ? parent.top : undefined
-                    bottom: useWaffle ? undefined : parent.bottom
-                    topMargin: useWaffle ? -height : 0
-                    bottomMargin: useWaffle ? 0 : -height
+                    bottom: parent.bottom
+                    bottomMargin: -height
                 }
 
                 Connections {
                     target: root
                     function onVisibleChanged() {
                         if (!visible) return;
-                        if (regionSelectionControls.useWaffle) {
-                            regionSelectionControls.anchors.topMargin = regionSelectionControls.restTopMargin;
-                        } else {
-                            regionSelectionControls.anchors.bottomMargin = regionSelectionControls.restBottomMargin;
-                        }
+                        regionSelectionControls.anchors.bottomMargin = regionSelectionControls.restBottomMargin;
                         regionSelectionControls.opacity = 1;
                     }
                 }
                 onRestBottomMarginChanged: {
-                    if (root.visible && !regionSelectionControls.useWaffle)
+                    if (root.visible)
                         regionSelectionControls.anchors.bottomMargin = regionSelectionControls.restBottomMargin;
-                }
-                onRestTopMarginChanged: {
-                    if (root.visible && regionSelectionControls.useWaffle)
-                        regionSelectionControls.anchors.topMargin = regionSelectionControls.restTopMargin;
                 }
                 Behavior on opacity {
                     animation: NumberAnimation { duration: Appearance.animation.elementMoveFast.duration; easing.type: Appearance.animation.elementMoveFast.type; easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve }
@@ -704,8 +644,7 @@ PanelWindow {
 
                 Loader {
                     id: controlsLoader
-                    sourceComponent: regionSelectionControls.useWaffle ? waffleControls
-                        : root.useIris ? irisControls : materialControls
+                    sourceComponent: root.useIris ? irisControls : materialControls
                 }
 
                 Component {
@@ -768,22 +707,6 @@ PanelWindow {
                     }
                 }
 
-                // Waffle (Windows 11) controls
-                Component {
-                    id: waffleControls
-                    WaffleRegion.WOptionsToolbar {
-                        action: root.action
-                        selectionMode: root.selectionMode
-                        onActionChanged: root.action = action
-                        onSelectionModeChanged: root.selectionMode = selectionMode
-                        onDismiss: root.dismiss()
-                        onFullscreenRequested: root.snipFullscreen()
-                        onColorPickerRequested: {
-                            root.dismiss();
-                            ShellExec.execDetachedArgs(["/usr/bin/bash", "-c", "sleep 0.3; /usr/bin/hyprpicker -a"], "Pick color");
-                        }
-                    }
-                }
             }
             
         }

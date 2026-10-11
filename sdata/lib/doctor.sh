@@ -83,8 +83,6 @@ check_dependencies() {
         "uv:uv"
         "cava:cava"
         "qalc:qalculate"
-        "yt-dlp:yt-dlp"
-        "socat:socat"
         "brightnessctl:brightnessctl"
         "slurp:slurp"
         "wf-recorder:wf-recorder"
@@ -98,26 +96,14 @@ check_dependencies() {
         "missioncenter:mission-center"
         "nm-connection-editor:nm-connection-editor"
         "xdg-settings:xdg-utils"
-        "mpv:mpv"
         "swaylock:swaylock"
         "swayidle:swayidle"
-        "songrec:SongRec"
         "trans:translate-shell"
     )
 
-    # Arch's update service uses checkupdates from pacman-contrib. Other
-    # distros have their own package managers, so treating it as a universal
-    # runtime dependency creates a permanently-failing Doctor result.
+    # The update service uses checkupdates from pacman-contrib.
     if [[ "${OS_GROUP_ID:-unknown}" == "arch" ]]; then
         cmds+=("checkupdates:pacman-contrib")
-    fi
-    if [[ "${OS_GROUP_ID:-unknown}" == "void" ]]; then
-        cmds+=(
-            "ydotool:ydotool"
-            "secret-tool:libsecret"
-            "gnome-keyring-daemon:gnome-keyring"
-            "powerprofilesctl:power-profiles-daemon"
-        )
     fi
 
     # Check required commands
@@ -129,55 +115,6 @@ check_dependencies() {
             missing_cmds+=("$cmd")
         fi
     done
-
-    # Void's source provider is version-pinned, so an old binary is also a
-    # repairable dependency rather than merely an available command.
-    if [[ "${OS_GROUP_ID:-unknown}" == "void" ]]; then
-        local qml_root webengine_qml_found=false layershell_qml_found=false
-        for qml_root in /usr/lib/qt6/qml /usr/lib64/qt6/qml /usr/local/lib/qt6/qml /usr/local/lib64/qt6/qml; do
-            [[ -f "$qml_root/QtWebEngine/qmldir" ]] && webengine_qml_found=true
-            [[ -f "$qml_root/org/kde/layershell/qmldir" ]] && layershell_qml_found=true
-        done
-        if [[ "$webengine_qml_found" != true ]]; then
-            missing+=("Qt WebEngine QML")
-            missing_cmds+=("qt-webengine")
-        fi
-        if [[ "$layershell_qml_found" != true ]]; then
-            missing+=("LayerShellQt QML")
-            missing_cmds+=("layer-shell-qt")
-        fi
-
-        # Older Void Darkly provider builds disabled KDecoration support. The
-        # style itself still loaded, but darkly-settings6 then failed when it
-        # tried to load the decoration settings KCM. Treat that partial install
-        # as repairable so normal updates can rebuild the complete provider.
-        local darkly_kcm_found=false darkly_plugin_root
-        for darkly_plugin_root in \
-            "$(qtpaths6 --plugin-dir 2>/dev/null || true)" \
-            /usr/lib64/qt6/plugins \
-            /usr/lib/qt6/plugins \
-            /usr/lib/x86_64-linux-gnu/qt6/plugins; do
-            [[ -n "$darkly_plugin_root" ]] || continue
-            if [[ -f "$darkly_plugin_root/org.kde.kdecoration3.kcm/kcm_darklydecoration.so" ]]; then
-                darkly_kcm_found=true
-                break
-            fi
-        done
-        if [[ "$darkly_kcm_found" != true ]]; then
-            missing+=("Darkly settings KCM")
-            missing_cmds+=("darkly")
-        fi
-
-        local doctor_repo_root void_ydotool_version installed_ydotool_version
-        doctor_repo_root="${REPO_ROOT:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)}"
-        void_ydotool_version="$(sed -n 's/^YDOTOOL_VERSION="\([^"]*\)"/\1/p' "$doctor_repo_root/sdata/dist-void/install-deps.sh")"
-        installed_ydotool_version="$(ydotoold --version 2>/dev/null || true)"
-        if [[ -n "$void_ydotool_version" && "$installed_ydotool_version" != "v${void_ydotool_version}" ]] \
-                && [[ " ${missing_cmds[*]} " != *" ydotool "* ]]; then
-            missing+=("ydotool v${void_ydotool_version}")
-            missing_cmds+=("ydotool")
-        fi
-    fi
 
     # EasyEffects can expose Equalizer settings through its local server even
     # when the actual LSP LV2 DSP backend is absent. Check the bundle itself so
@@ -220,14 +157,7 @@ check_dependencies() {
     fi
     local ocr_models=(
         "eng:ocr-eng:OCR English data"
-        "spa:ocr-spa:OCR Spanish data"
-        "rus:ocr-rus:OCR Russian data"
-        "jpn:ocr-jpn:OCR Japanese data"
-        "jpn_vert:ocr-jpn-vert:OCR Japanese vertical data"
-        "chi_sim:ocr-chi-sim:OCR Simplified Chinese data"
-        "chi_sim_vert:ocr-chi-sim-vert:OCR Simplified Chinese vertical data"
-        "chi_tra:ocr-chi-tra:OCR Traditional Chinese data"
-        "chi_tra_vert:ocr-chi-tra-vert:OCR Traditional Chinese vertical data"
+        "deu:ocr-deu:OCR German data"
     )
     local ocr_spec ocr_lang ocr_id ocr_name
     for ocr_spec in "${ocr_models[@]}"; do
@@ -247,54 +177,8 @@ check_dependencies() {
         doctor_missing_deps=("${missing_cmds[@]}")
         doctor_fail "Missing: ${missing[*]}"
         
-        # Provide distro-specific install hints
-        case "${OS_GROUP_ID:-unknown}" in
-            arch)
-                echo -e "    ${STY_FAINT}Run: ./setup install (installs the matching Arch packages)${STY_RST}"
-                ;;
-            fedora)
-                echo -e "    ${STY_FAINT}Run: sudo dnf install ... (see ./setup install)${STY_RST}"
-                ;;
-            debian|ubuntu)
-                echo -e "    ${STY_FAINT}Run: sudo apt install ... (see ./setup install)${STY_RST}"
-                ;;
-            void)
-                echo -e "    ${STY_FAINT}Run: ./setup install (repairs the matching XBPS providers)${STY_RST}"
-                ;;
-            *)
-                echo -e "    ${STY_FAINT}Install these tools using your package manager${STY_RST}"
-                ;;
-        esac
+        echo -e "    ${STY_FAINT}Run: ./setup install (installs the matching Arch packages)${STY_RST}"
     fi
-}
-
-check_graphics_stack() {
-    if [[ "${OS_GROUP_ID:-unknown}" != "void" ]]; then
-        doctor_pass "Graphics preflight not required for ${OS_GROUP_ID:-this distro}"
-        return 0
-    fi
-
-    local probe="${DOTS_CORE_CONFDIR:-.}/scripts/check-void-graphics.sh"
-    if [[ ! -f "$probe" && -f ./scripts/check-void-graphics.sh ]]; then
-        probe="./scripts/check-void-graphics.sh"
-    fi
-    if [[ ! -f "$probe" ]]; then
-        doctor_fail "Void graphics preflight helper is missing"
-        return 1
-    fi
-
-    local output rc=0
-    output="$(bash "$probe" 2>&1)" || rc=$?
-    if [[ $rc -eq 0 ]]; then
-        doctor_pass "${output%%$'\n'*}"
-        return 0
-    fi
-
-    doctor_fail "${output%%$'\n'*}"
-    if [[ "$output" == *$'\n'* ]]; then
-        printf '%s\n' "${output#*$'\n'}"
-    fi
-    return "$rc"
 }
 
 get_missing_dependencies() {
@@ -654,16 +538,6 @@ check_python_packages() {
         fi
     else
         doctor_fail "uv not installed, cannot check Python packages"
-    fi
-
-    local deno_bin
-    deno_bin="$(command -v deno 2>/dev/null || true)"
-    if ytmusic-deno-compatible "$deno_bin"; then
-        doctor_pass "YT Music JS runtime OK"
-    elif ensure-ytmusic-js-runtime; then
-        doctor_fix "Installed current Deno runtime for YT Music"
-    else
-        doctor_fail "YT Music JS runtime unavailable"
     fi
 }
 
@@ -1044,16 +918,6 @@ check_manifest() {
 check_service_unit_health() {
     if ! declare -F has_usable_systemd_user_manager >/dev/null 2>&1 \
             || ! has_usable_systemd_user_manager; then
-        if [[ "${OS_GROUP_ID:-unknown}" == void ]]; then
-            if command -v nmcli >/dev/null 2>&1 \
-                    && nmcli -t -f STATE general >/dev/null 2>&1; then
-                doctor_pass "Void NetworkManager provider running"
-            else
-                doctor_fail "NetworkManager is installed but its Void runit service is not running"
-                echo -e "    ${STY_FAINT}Run: ./setup install and accept the NetworkManager migration prompt${STY_RST}"
-            fi
-            return 0
-        fi
         doctor_pass "User service checks skipped (no usable systemd user manager)"
         return 0
     fi
@@ -1577,10 +1441,6 @@ check_conflicting_shells() {
         for pkg in "${shell_pkgs[@]}"; do
             pacman -Qi "$pkg" &>/dev/null 2>&1 && found+=("$pkg")
         done
-    elif command -v xbps-query &>/dev/null; then
-        for pkg in "${shell_pkgs[@]}"; do
-            xbps-query -p pkgver "$pkg" &>/dev/null 2>&1 && found+=("$pkg")
-        done
     else
         doctor_pass "Conflicting shells (package manager unsupported, skipped)"
         return 0
@@ -1736,13 +1596,7 @@ check_qt_theming() {
 
     if ! $plugin_found; then
         doctor_fail "plasma-integration not installed (Qt apps will have broken colors)"
-        case "${OS_GROUP_ID:-unknown}" in
-            arch) echo -e "    ${STY_FAINT}Run: sudo pacman -S plasma-integration${STY_RST}" ;;
-            fedora) echo -e "    ${STY_FAINT}Run: sudo dnf install plasma-integration${STY_RST}" ;;
-            debian|ubuntu) echo -e "    ${STY_FAINT}Run: sudo apt install plasma-integration${STY_RST}" ;;
-            void) echo -e "    ${STY_FAINT}Run: ./setup install (repairs the managed Void provider)${STY_RST}" ;;
-            *) echo -e "    ${STY_FAINT}Install plasma-integration using your package manager${STY_RST}" ;;
-        esac
+        echo -e "    ${STY_FAINT}Run: sudo pacman -S plasma-integration${STY_RST}"
     else
         # Also check niri config isn't stuck on qt6ct when kde plugin is available
         local niri_cfg="${XDG_CONFIG_HOME}/niri/config.kdl"
@@ -1785,11 +1639,7 @@ check_qt_theming() {
 
     if ! $darkly_found; then
         doctor_fail "Darkly Qt style not installed (Qt apps won't have Material You style)"
-        case "${OS_GROUP_ID:-unknown}" in
-            arch) echo -e "    ${STY_FAINT}Run: yay -S darkly-bin${STY_RST}" ;;
-            void) echo -e "    ${STY_FAINT}Run: ./setup install (repairs the pinned Void Darkly provider)${STY_RST}" ;;
-            *) echo -e "    ${STY_FAINT}Install darkly from: https://github.com/AlessioC31/darkly${STY_RST}" ;;
-        esac
+        echo -e "    ${STY_FAINT}Run: yay -S darkly-bin${STY_RST}"
     else
         doctor_pass "Darkly Qt style OK"
     fi
@@ -1801,14 +1651,7 @@ check_qt_theming() {
             doctor_pass "kde-cli-tools OK"
         else
             doctor_fail "kde-cli-tools not installed (Dolphin 'Open With' dialog won't work)"
-            case "${OS_GROUP_ID:-unknown}" in
-                arch) echo -e "    ${STY_FAINT}Run: sudo pacman -S kde-cli-tools${STY_RST}" ;;
-                fedora) echo -e "    ${STY_FAINT}Run: sudo dnf install kde-cli-tools${STY_RST}" ;;
-                debian|ubuntu) echo -e "    ${STY_FAINT}Run: sudo apt install kde-cli-tools${STY_RST}" ;;
-                opensuse) echo -e "    ${STY_FAINT}Run: sudo zypper install kde-cli-tools6${STY_RST}" ;;
-                void) echo -e "    ${STY_FAINT}Run: sudo xbps-install -S kde-cli-tools${STY_RST}" ;;
-                *) echo -e "    ${STY_FAINT}Install kde-cli-tools using your package manager${STY_RST}" ;;
-            esac
+            echo -e "    ${STY_FAINT}Run: sudo pacman -S kde-cli-tools${STY_RST}"
         fi
     fi
 }
@@ -1877,7 +1720,7 @@ _doctor_run_step() {
 }
 
 run_doctor_with_fixes() {
-    local total_steps=25
+    local total_steps=24
     local doctor_started_at=$SECONDS
     doctor_passed=0
     doctor_failed=0
@@ -1888,28 +1731,17 @@ run_doctor_with_fixes() {
 
     if [[ ${#doctor_missing_deps[@]} -gt 0 ]]; then
         detect_distro
-        case "$OS_GROUP_ID" in
-            arch|fedora|debian|ubuntu|void)
-                if ! $ask || tui_confirm "Install missing dependencies now?"; then
-                    SKIP_SYSUPDATE=true
-                    ONLY_MISSING_DEPS="${doctor_missing_deps[*]}"
-                    if ! source ./sdata/subcmd-install/1.deps-router.sh; then
-                        doctor_fail "Dependency installation failed"
-                    elif [[ "$OS_GROUP_ID" == void ]] && ! configure_void_ydotool_uinput; then
-                        doctor_fail "Could not configure the ydotool provider"
-                    elif [[ "$OS_GROUP_ID" == void ]] && ! reconcile_inir_supervisor >/dev/null; then
-                        doctor_fail "Could not activate the ydotool provider"
-                    else
-                        # Re-check after a successful repair.
-                        doctor_passed=0; doctor_failed=0; doctor_fixed=0
-                        _doctor_run_step 1 $total_steps "Re-checking dependencies" check_dependencies
-                    fi
-                fi
-                ;;
-            *)
-                echo -e "  ${STY_YELLOW}Automatic install not available for ${OS_GROUP_ID}. Install manually.${STY_RST}"
-                ;;
-        esac
+        if ! $ask || tui_confirm "Install missing dependencies now?"; then
+            SKIP_SYSUPDATE=true
+            ONLY_MISSING_DEPS="${doctor_missing_deps[*]}"
+            if ! source ./sdata/subcmd-install/1.deps-router.sh; then
+                doctor_fail "Dependency installation failed"
+            else
+                # Re-check after a successful repair.
+                doctor_passed=0; doctor_failed=0; doctor_fixed=0
+                _doctor_run_step 1 $total_steps "Re-checking dependencies" check_dependencies
+            fi
+        fi
     fi
 
     _doctor_run_step 2  $total_steps "Checking fonts"                check_fonts
@@ -1953,7 +1785,6 @@ run_doctor_with_fixes() {
     _doctor_run_step 22 $total_steps "Checking wallpaper health"     check_wallpaper_health
     _doctor_run_step 23 $total_steps "Checking environment variables" check_environment_vars
     _doctor_run_step 24 $total_steps "Checking Niri config"          check_niri_config
-    _doctor_run_step 25 $total_steps "Checking graphics renderer"    check_graphics_stack
 
     echo ""
     tui_divider

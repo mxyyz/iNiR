@@ -732,109 +732,6 @@ Item {
                 }
             }
         }
-        Loader {
-            anchors.fill: parent
-            active: root.kind === "anime"
-            sourceComponent: Item {
-                id: animeFace
-                anchors.fill: parent
-                readonly property var show: IrisPieces.animeNext
-                readonly property string cover: String(animeFace.show?.imageSmall ?? animeFace.show?.image ?? "")
-                readonly property real approach: animeFace.show ? IrisPieces.animeApproach(animeFace.show.airingAt) : 0
-                Component.onCompleted: AnimeService.fetchTopAiring()
-                Ring {
-                    visible: animeFace.cover.length > 0
-                    anchors.fill: parent
-                    anchors.margins: 2 * root.d + root.platedInset
-                    tint: root.legible(IrisStyle.identity.pink, 3)
-                    progress: animeFace.approach
-                }
-                ClippingRectangle {
-                    anchors.centerIn: parent
-                    width: Math.round(parent.width - (14 + 4 * root.absorb) * root.d)
-                    height: width
-                    radius: IrisStyle.iconRadius(width)
-                    color: IrisStyle.fillQuiet
-                    visible: animeFace.cover.length > 0
-                    IrisImage {
-                        anchors.fill: parent
-                        source: animeFace.cover
-                    }
-                }
-                Glyph {
-                    visible: animeFace.cover.length === 0
-                    anchors.centerIn: parent
-                    text: "live_tv"
-                    iconSize: 18 * root.d
-                    color: root.inkSoft
-                }
-            }
-        }
-        Loader {
-            anchors.fill: parent
-            active: root.kind === "watching"
-            sourceComponent: Item {
-                id: watchingFace
-                readonly property var entry: AnimeWatch.current
-                readonly property var state: AnimeWatch.stateOf(watchingFace.entry)
-                readonly property string episode: AnimeWatch.busy
-                    ? AnimeWatch.busyEpisode : watchingFace.state.episode
-                readonly property real watched: AnimeWatch.busy ? 0 : watchingFace.state.progress
-                Component.onCompleted: AnimeWatch.reload()
-                Ring {
-                    visible: watchingFace.watched > 0
-                    anchors.fill: parent
-                    anchors.margins: 2 * root.d + root.platedInset
-                    tint: root.legible(IrisStyle.identity.pink, 3)
-                    progress: watchingFace.watched
-                }
-                Ring {
-                    id: watchingSpinner
-                    visible: AnimeWatch.busy
-                    anchors.fill: parent
-                    anchors.margins: 2 * root.d + root.platedInset
-                    tint: root.legible(IrisStyle.identity.pink, 3)
-                    progress: AnimeWatch.phase === "playing" ? 1 : 0.28
-                    RotationAnimation on rotation {
-                        running: watchingSpinner.visible && (AnimeWatch.phase === "launching" || (AnimeWatch.phase === "searching" && !AnimeWatch.choosing))
-                        from: 0; to: 360
-                        duration: IrisStyle.duration(1100)
-                        loops: Animation.Infinite
-                        onStopped: watchingSpinner.rotation = 0
-                    }
-                }
-                FaceText {
-                    id: watchingNumber
-                    anchors.centerIn: parent
-                    anchors.horizontalCenterOffset: Math.round(1 * root.d)
-                    anchors.verticalCenterOffset: Math.round(1 * root.d)
-                    visible: watchingFace.episode.length > 0
-                    text: watchingFace.episode
-                    font.family: IrisStyle.fontNumbers
-                    font.features: ({ "tnum": 1 })
-                    font.pixelSize: (watchingFace.episode.length > 2 ? 13 : 18) * IrisStyle.typeScale
-                    font.weight: IrisStyle.weight(Font.Bold)
-                }
-                FaceText {
-                    x: watchingNumber.x - width * 0.55
-                    y: watchingNumber.y - height * 0.2
-                    visible: watchingNumber.visible
-                    text: Translation.tr("EP")
-                    color: root.legible(IrisStyle.identity.pink, 3)
-                    style: Text.Outline
-                    styleColor: IrisStyle.bodySurface
-                    font.pixelSize: 8 * IrisStyle.typeScale
-                    font.weight: IrisStyle.weight(Font.Black)
-                }
-                Glyph {
-                    anchors.centerIn: parent
-                    visible: watchingFace.episode.length === 0
-                    text: IrisPieces.glyphOf("watching", "")
-                    iconSize: 18 * root.d
-                    color: root.inkSoft
-                }
-            }
-        }
         Column {
             id: notificationFace
             readonly property int count: Notifications.list?.length ?? 0
@@ -920,8 +817,6 @@ Item {
         : root.kind === "vitals" ? Translation.tr("Vitals")
         : root.kind === "workspaces" ? Translation.tr("Workspaces")
         : root.kind === "updates" ? Translation.tr("Updates")
-        : root.kind === "anime" ? Translation.tr("Airing")
-        : root.kind === "watching" ? Translation.tr("Continue")
         : root.kind === "shellUpdate" ? Translation.tr("New iNiR")
         : root.kind === "vpn" ? Translation.tr("VPN")
         : root.kind === "record" ? Translation.tr("Screen recording") : Translation.tr("Timer")

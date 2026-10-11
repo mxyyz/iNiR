@@ -9,8 +9,7 @@ import Quickshell
 import Quickshell.Io
 
 // Stable Alt+Tab IPC router plus lightweight no-visual controller. Visual ii
-// commands are delivered internally to AltSwitcher.qml; visual Waffle commands
-// stay family-local. No-UI modes preserve MRU cycling without constructing the
+// commands are delivered internally to AltSwitcher.qml. No-UI modes preserve MRU cycling without constructing the
 // full switcher windows, preview delegates, shaders or icon cache.
 Scope {
     id: root
@@ -19,8 +18,6 @@ Scope {
     property var snapshot: []
     property int currentIndex: 0
 
-    readonly property bool waffleFamilyActive:
-        (Config.options?.panelFamily ?? "ii") === "waffle"
     readonly property bool iiFamilyActive:
         (Config.options?.panelFamily ?? "ii") === "ii"
     readonly property string iiPreset:
@@ -30,17 +27,8 @@ Scope {
         && root.iiPreset !== "skew"
     readonly property bool routeToVisualIi:
         root.iiFamilyActive && !root.iiNoVisual
-    readonly property var waffleOptions:
-        Config.options?.waffles?.altSwitcher ?? ({})
-    readonly property string wafflePreset: waffleOptions.preset ?? "thumbnails"
-    readonly property bool waffleNoVisual:
-        wafflePreset === "none"
-        || ((waffleOptions.noVisualUi ?? false) && wafflePreset !== "skew")
-    readonly property bool routeToVisualWaffle:
-        waffleFamilyActive && !waffleNoVisual
-    readonly property bool useMostRecentFirst: waffleFamilyActive
-        ? (waffleOptions.useMostRecentFirst ?? true)
-        : (Config.options?.altSwitcher?.useMostRecentFirst ?? true)
+    readonly property bool useMostRecentFirst:
+        Config.options?.altSwitcher?.useMostRecentFirst ?? true
 
     Timer {
         id: resetTimer
@@ -58,14 +46,6 @@ Scope {
 
     function forwardToVisualIi(functionName: string): void {
         GlobalStates.altSwitcherCommand(functionName)
-    }
-
-    function routeToWaffle(functionName: string): void {
-        Quickshell.execDetached([
-            Quickshell.shellPath("scripts/inir"),
-            "waffleAltSwitcher",
-            functionName
-        ])
     }
 
     function buildSnapshot(): var {
@@ -157,7 +137,6 @@ Scope {
 
     Component.onCompleted: GlobalStates.altSwitcherOpen = false
     onRouteToVisualIiChanged: root.resetSession()
-    onRouteToVisualWaffleChanged: root.resetSession()
 
     IpcHandler {
         target: "altSwitcher"
@@ -172,10 +151,6 @@ Scope {
         }
 
         function open(): void {
-            if (root.routeToVisualWaffle) {
-                root.routeToWaffle("open")
-                return
-            }
             if (root.routeToVisualIi) {
                 root.forwardToVisualIi("open")
                 return
@@ -184,10 +159,6 @@ Scope {
         }
 
         function close(): void {
-            if (root.routeToVisualWaffle) {
-                root.routeToWaffle("close")
-                return
-            }
             if (root.routeToVisualIi) {
                 root.forwardToVisualIi("close")
                 return
@@ -196,10 +167,6 @@ Scope {
         }
 
         function toggle(): void {
-            if (root.routeToVisualWaffle) {
-                root.routeToWaffle("toggle")
-                return
-            }
             if (root.routeToVisualIi) {
                 root.forwardToVisualIi("toggle")
                 return
@@ -208,10 +175,6 @@ Scope {
         }
 
         function next(): void {
-            if (root.routeToVisualWaffle) {
-                root.routeToWaffle("next")
-                return
-            }
             if (root.routeToVisualIi) {
                 root.forwardToVisualIi("next")
                 return
@@ -220,10 +183,6 @@ Scope {
         }
 
         function previous(): void {
-            if (root.routeToVisualWaffle) {
-                root.routeToWaffle("previous")
-                return
-            }
             if (root.routeToVisualIi) {
                 root.forwardToVisualIi("previous")
                 return

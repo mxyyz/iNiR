@@ -135,17 +135,6 @@ Item {
         }
     }
 
-    MascotImage {
-        anchors.bottom: dialog.top
-        anchors.bottomMargin: -12
-        anchors.right: dialog.right
-        anchors.rightMargin: Appearance.sizes.spacingLarge
-        width: 92
-        height: 92
-        pose: "warning-concerned"
-        surface: "dialogs"
-    }
-
     WindowDialog {
         id: dialog
         anchors.centerIn: parent

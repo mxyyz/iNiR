@@ -28,11 +28,7 @@ Singleton {
     readonly property string fillMode: Config.options?.background?.fillMode ?? "fill"
     readonly property bool animationEnabled: Config.options?.background?.enableAnimation ?? true
     readonly property string panelFamily: Config.options?.panelFamily ?? "ii"
-    readonly property bool waffleUsesMainWallpaper: Config.options?.waffles?.background?.useMainWallpaper ?? true
-    readonly property string waffleWallpaperPath: Config.options?.waffles?.background?.wallpaperPath ?? ""
-    readonly property bool hideMainWallpaper: panelFamily === "waffle"
-        ? ((Config.options?.waffles?.background?.backdrop?.enable ?? false) && (Config.options?.waffles?.background?.backdrop?.hideWallpaper ?? false))
-        : ((Config.options?.background?.backdrop?.enable ?? false) && (Config.options?.background?.backdrop?.hideWallpaper ?? false))
+    readonly property bool hideMainWallpaper: (Config.options?.background?.backdrop?.enable ?? false) && (Config.options?.background?.backdrop?.hideWallpaper ?? false)
     readonly property bool multiMonitorEnabled: WallpaperListener.multiMonitorEnabled
     readonly property var effectivePerMonitor: WallpaperListener.effectivePerMonitor
     readonly property string globalWallpaperPath: Config.options?.background?.wallpaperPath ?? ""
@@ -347,10 +343,7 @@ Singleton {
                 continue
 
             const monitorData = multiMonitorEnabled ? (effectivePerMonitor[monitorName] ?? null) : null
-            const waffleOwnPath = (!multiMonitorEnabled && panelFamily === "waffle" && !(waffleUsesMainWallpaper ?? true))
-                ? (waffleWallpaperPath || globalWallpaperPath)
-                : ""
-            const rawPath = waffleOwnPath || ((monitorData && monitorData.path) ? monitorData.path : globalWallpaperPath)
+            const rawPath = (monitorData && monitorData.path) ? monitorData.path : globalWallpaperPath
             const cleanPath = FileUtils.trimFileProtocol(String(rawPath ?? ""))
             if (!supportsMainWallpaper(cleanPath))
                 continue
@@ -659,8 +652,6 @@ Singleton {
         syncDebounce.restart()
     }
     onPanelFamilyChanged: syncDebounce.restart()
-    onWaffleUsesMainWallpaperChanged: syncDebounce.restart()
-    onWaffleWallpaperPathChanged: syncDebounce.restart()
     onEffectivePerMonitorChanged: {
         if (root.internalShaderTransitionActive)
             root.shaderHandoffPending = true

@@ -15,7 +15,7 @@ fails when a literal slips back into an iRiS consumer:
 
 A line that genuinely needs a literal (an illustration, a mock preview that
 mirrors a style value) carries `// iris-literal: <reason>`. Only iRiS is
-checked; ii and Waffle own their own systems.
+checked; ii owns its own system.
 """
 
 import pathlib

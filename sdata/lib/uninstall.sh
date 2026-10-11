@@ -223,21 +223,6 @@ package_has_dependents() {
             local deps=$(pacman -Qi "$pkg" 2>/dev/null | grep "Required By" | cut -d: -f2)
             [[ "$deps" != " None" && -n "$deps" ]]
             ;;
-        fedora)
-            # Check reverse dependencies
-            local deps=$(dnf repoquery --whatrequires "$pkg" 2>/dev/null | head -1)
-            [[ -n "$deps" ]]
-            ;;
-        debian|ubuntu)
-            # Check reverse dependencies
-            local deps=$(apt-cache rdepends "$pkg" 2>/dev/null | grep -v "^$pkg$" | head -1)
-            [[ -n "$deps" ]]
-            ;;
-        void)
-            # XBPS prints reverse dependencies one per line; no output means none.
-            local deps=$(xbps-query -X "$pkg" 2>/dev/null | head -1)
-            [[ -n "$deps" ]]
-            ;;
         *)
             # Can't check, assume it might have dependents
             return 0
@@ -938,50 +923,6 @@ uninstall_show_packages() {
                     echo ""
                 fi
                 ;;
-            fedora)
-                if [[ ${#safe_to_remove[@]} -gt 0 ]]; then
-                    echo -e "  ${STY_GREEN}# Safe to remove:${STY_RST}"
-                    echo -e "  sudo dnf remove ${safe_to_remove[*]}"
-                    echo ""
-                fi
-                if [[ ${#ask_before_remove[@]} -gt 0 ]]; then
-                    echo -e "  ${STY_YELLOW}# Check before removing:${STY_RST}"
-                    echo -e "  # sudo dnf remove ${ask_before_remove[*]}"
-                    echo ""
-                fi
-                echo -e "  ${STY_FAINT}# To disable COPRs:${STY_RST}"
-                echo -e "  sudo dnf copr disable errornointernet/quickshell"
-                echo -e "  sudo dnf copr disable yalter/niri"
-                echo ""
-                ;;
-            debian|ubuntu)
-                if [[ ${#safe_to_remove[@]} -gt 0 ]]; then
-                    echo -e "  ${STY_GREEN}# Safe to remove:${STY_RST}"
-                    echo -e "  sudo apt remove ${safe_to_remove[*]}"
-                    echo ""
-                fi
-                if [[ ${#ask_before_remove[@]} -gt 0 ]]; then
-                    echo -e "  ${STY_YELLOW}# Check before removing:${STY_RST}"
-                    echo -e "  # sudo apt remove ${ask_before_remove[*]}"
-                    echo ""
-                fi
-                echo -e "  ${STY_FAINT}# Compiled packages (in /usr/local/bin):${STY_RST}"
-                echo -e "  # sudo rm /usr/local/bin/qs"
-                echo -e "  # sudo rm /usr/local/bin/niri"
-                echo ""
-                ;;
-            void)
-                if [[ ${#safe_to_remove[@]} -gt 0 ]]; then
-                    echo -e "  ${STY_GREEN}# Safe to remove:${STY_RST}"
-                    echo -e "  sudo xbps-remove -R ${safe_to_remove[*]}"
-                    echo ""
-                fi
-                if [[ ${#ask_before_remove[@]} -gt 0 ]]; then
-                    echo -e "  ${STY_YELLOW}# Check before removing:${STY_RST}"
-                    echo -e "  # sudo xbps-remove -R ${ask_before_remove[*]}"
-                    echo ""
-                fi
-                ;;
             *)
                 echo -e "${STY_FAINT}Remove packages using your package manager.${STY_RST}"
                 echo -e "${STY_FAINT}Check ~/.cargo/bin and ~/go/bin for tools installed there.${STY_RST}"
@@ -997,9 +938,7 @@ uninstall_show_packages() {
     fi
 
     case "$distro" in
-        void) echo -e "${STY_FAINT}Tip: Run 'xbps-query -X <package>' to see reverse dependencies.${STY_RST}" ;;
         arch) echo -e "${STY_FAINT}Tip: Run 'pacman -Qi <package>' to inspect package dependencies.${STY_RST}" ;;
-        debian|ubuntu) echo -e "${STY_FAINT}Tip: Run 'apt-cache rdepends <package>' to see reverse dependencies.${STY_RST}" ;;
         *) echo -e "${STY_FAINT}Review reverse dependencies with your package manager before removing shared tools.${STY_RST}" ;;
     esac
     echo ""

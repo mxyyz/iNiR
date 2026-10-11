@@ -1538,7 +1538,7 @@ ContentPage {
             NoticeBox {
                 Layout.fillWidth: true
                 materialIcon: "merge"
-                text: Translation.tr("These monitor lists apply to Material and Waffle. iRiS keeps one transient popup on the focused output to reduce residency.")
+                text: Translation.tr("These monitor lists apply to Material. iRiS keeps one transient popup on the focused output to reduce residency.")
             }
 
             PresetActions {

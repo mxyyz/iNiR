@@ -19,18 +19,9 @@ Item {
         anchors.centerIn: parent
         spacing: 10
         
-        MascotImage {
-            id: noResultsMascot
-            Layout.alignment: Qt.AlignHCenter
-            Layout.preferredWidth: 96
-            Layout.preferredHeight: 96
-            surface: "cheatsheet"
-            pose: "fisheye-inspect"
-        }
 
         MaterialSymbol {
             Layout.alignment: Qt.AlignHCenter
-            visible: !noResultsMascot.active
             text: "search_off"
             iconSize: 40
             color: Appearance.colors.colSubtext

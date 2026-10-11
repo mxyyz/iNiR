@@ -17,7 +17,7 @@ Singleton {
 	
 	// Raw filtered players - updated imperatively to avoid constant re-evaluation
 	property list<MprisPlayer> players: []
-	// Display players with YtMusic duplicate filtering - USE THIS IN UI WIDGETS.
+	// Display players with duplicate filtering - USE THIS IN UI WIDGETS.
 	// Kept imperative as well: metadata changes can re-evaluate duplicate
 	// filtering without changing player identity, and a fresh array here makes
 	// Repeater-based popups destroy/recreate delegates mid-track transition.
@@ -267,7 +267,7 @@ Singleton {
 		// change, since title changes schedule rebuilds).
 		if (!_samePlayerOrder(newList, players)) players = newList;
 
-		const nextDisplayPlayers = _filterYtMusicDuplicates(newList);
+		const nextDisplayPlayers = _filterDuplicates(newList);
 		if (!_samePlayerOrder(nextDisplayPlayers, displayPlayers)) displayPlayers = nextDisplayPlayers;
 
 		// Keep trackedPlayer consistent with filtered list
@@ -367,15 +367,6 @@ Singleton {
 		return players[0] ?? null;
 	}
 
-	readonly property bool isYtMusicActive: {
-		if (!(Config.options?.sidebar?.ytmusic?.enable ?? false)) return false;
-		if (activePlayer) return _isYtMusicMpv(activePlayer);
-		// Fallback only during transient gaps where activePlayer is momentarily null
-		// while YtMusic is still playing/initializing.
-		if (!YtMusic.currentVideoId) return false;
-		return !!YtMusic.mpvPlayer || !!YtMusic.isPlaying;
-	}
-	
 	property bool hasPlasmaIntegration: false
 	property bool hasWtype: false
 	Process {
@@ -441,20 +432,6 @@ Singleton {
 	onHasPlasmaIntegrationChanged: {
 		root._updateMpvCache();
 		root._rebuildPlayerList();
-	}
-	
-	Connections {
-		target: YtMusic
-		function onMpvPlayerChanged() {
-			root._updateMpvCache();
-			root._rebuildPlayerList();
-		}
-		function onCurrentVideoIdChanged() {
-			root._rebuildPlayerList();
-		}
-		function onCurrentTitleChanged() {
-			root._rebuildPlayerList();
-		}
 	}
 	
 	function _updateMpvCache(): void {
@@ -523,9 +500,6 @@ Singleton {
 		const name = player?.dbusName ?? "";
 		if (!name) return false;
 		
-		const ytMusicEnabled = Config.options?.sidebar?.ytmusic?.enable ?? false;
-		if (!ytMusicEnabled && _isYtMusicMpvRaw(player)) return false;
-
 		// Explicitly drop X/Twitter media noise early (url/title/album)
 		const rawUrl = player?.metadata?.["xesam:url"] ?? "";
 		const lowerUrl = rawUrl.toLowerCase();
@@ -552,9 +526,8 @@ Singleton {
 			}
 		}
 		
-		// mpv handling - prefer YtMusic.mpvPlayer when available
+		// mpv handling
 		if (name === "org.mpris.MediaPlayer2.mpv" || name.startsWith("org.mpris.MediaPlayer2.mpv.instance")) {
-			if (YtMusic.mpvPlayer) return player === YtMusic.mpvPlayer;
 			// Use cached values instead of iterating
 			if (name === "org.mpris.MediaPlayer2.mpv" && _mpvInstanceCache.hasMpvInstance) return false;
 			// Drop ghost mpv.instance entries when base mpv exists
@@ -699,29 +672,6 @@ Singleton {
 
 	property var activeTrack;
 
-	function _isYtMusicMpvRaw(player): bool {
-		if (!player) return false;
-		if (YtMusic.mpvPlayer && player === YtMusic.mpvPlayer) return true;
-		const id = (player.identity ?? "").toLowerCase();
-		const entry = (player.desktopEntry ?? "").toLowerCase();
-		const isMpv = (id === "mpv" || id.includes("mpv") || entry === "mpv" || entry.includes("mpv"));
-		if (!isMpv) return false;
-		const trackUrl = player.metadata?.["xesam:url"] ?? "";
-		if (trackUrl.includes("youtube.com") || trackUrl.includes("youtu.be")) return true;
-		// Fallback: match by title when YtMusic is active
-		if (YtMusic.currentVideoId || YtMusic.currentTitle) {
-			const ytTitle = _normTitle(YtMusic.currentTitle);
-			const pTitle = _normTitle(player.trackTitle);
-			if (ytTitle && pTitle && (pTitle.includes(ytTitle) || ytTitle.includes(pTitle))) return true;
-		}
-		return false;
-	}
-
-	function _isYtMusicMpv(player): bool {
-		if (!(Config.options?.sidebar?.ytmusic?.enable ?? false)) return false;
-		return _isYtMusicMpvRaw(player);
-	}
-	
 	function _normTitle(s): string {
 		return (s ?? "").toLowerCase().replace(/[\t\r\n|•·]+/g, " ").replace(/\s+/g, " ").trim();
 	}
@@ -833,14 +783,10 @@ Singleton {
 	}
 
 	function canGoPreviousForPlayer(player): bool {
-		if (_isYtMusicMpv(player) && YtMusic.currentVideoId)
-			return YtMusic.canGoPrevious;
 		return (player?.canGoPrevious ?? false) || root._canUseBrowserNavigationFallback(player);
 	}
 
 	function canGoNextForPlayer(player): bool {
-		if (_isYtMusicMpv(player) && YtMusic.currentVideoId)
-			return YtMusic.canGoNext;
 		return (player?.canGoNext ?? false) || root._canUseBrowserNavigationFallback(player);
 	}
 
@@ -851,10 +797,7 @@ Singleton {
 
 	function previousForPlayer(player, showFeedback = true): bool {
 		let accepted = false;
-		if (_isYtMusicMpv(player) && YtMusic.currentVideoId && YtMusic.canGoPrevious) {
-			YtMusic.playPrevious();
-			accepted = true;
-		} else if (player?.canGoPrevious ?? false) {
+		if (player?.canGoPrevious ?? false) {
 			player.previous();
 			accepted = true;
 		} else if (root._canUseBrowserNavigationFallback(player)) {
@@ -868,10 +811,7 @@ Singleton {
 
 	function nextForPlayer(player, showFeedback = true): bool {
 		let accepted = false;
-		if (_isYtMusicMpv(player) && YtMusic.currentVideoId && YtMusic.canGoNext) {
-			YtMusic.playNext();
-			accepted = true;
-		} else if (player?.canGoNext ?? false) {
+		if (player?.canGoNext ?? false) {
 			player.next();
 			accepted = true;
 		} else if (root._canUseBrowserNavigationFallback(player)) {
@@ -883,54 +823,14 @@ Singleton {
 		return accepted;
 	}
 	
-	// Check if player is related to YtMusic (for duplicate filtering)
-	function _isYtMusicRelated(player): bool {
-		if (!player) return false;
-		if (!(Config.options?.sidebar?.ytmusic?.enable ?? false)) return false;
-		if (_isYtMusicMpv(player)) return true;
-		// Only consider browser YouTube players as YtMusic-related if titles match closely
-		if (!YtMusic.currentVideoId && !YtMusic.currentTitle) return false;
-		const trackUrl = player.metadata?.["xesam:url"] ?? "";
-		const isYouTube = trackUrl.includes("youtube.com") || trackUrl.includes("youtu.be");
-		if (!isYouTube) return false;
-		// Check if titles match (same video playing in browser and YtMusic)
-		const ytTitle = _normTitle(YtMusic.currentTitle);
-		const pTitle = _normTitle(player.trackTitle);
-		if (!ytTitle || !pTitle) return false;
-		// Consider related if titles are very similar (one contains the other)
-		return pTitle.includes(ytTitle) || ytTitle.includes(pTitle);
-	}
-	
-	// Filter YtMusic duplicates - keep only one YtMusic-related player
-	function _filterYtMusicDuplicates(playerList) {
+	// Filter title/position duplicates
+	function _filterDuplicates(playerList) {
 		if (!playerList || playerList.length === 0) return [];
-		
-		let nonYtMusic = [];
-		let ytMusic = [];
-		
-		for (const p of playerList) {
-			if (_isYtMusicRelated(p)) {
-				ytMusic.push(p);
-			} else {
-				nonYtMusic.push(p);
-			}
-		}
-		
-		// If multiple YtMusic players, keep only the preferred one
-		if (ytMusic.length > 1) {
-			// Prefer YtMusic.mpvPlayer, then first playing, then first with art
-			let chosen = ytMusic.find(p => YtMusic.mpvPlayer && p === YtMusic.mpvPlayer);
-			if (!chosen) chosen = ytMusic.find(p => p.isPlaying);
-			if (!chosen) chosen = ytMusic.find(p => p.trackArtUrl);
-			if (!chosen) chosen = ytMusic[0];
-			ytMusic = [chosen];
-		}
-		
-		// Filter title/position duplicates from non-YtMusic players
+
 		let filtered = [];
 		let used = new Set();
 		
-		const allPlayers = [...ytMusic, ...nonYtMusic].filter(player => player);
+		const allPlayers = playerList.filter(player => player);
 		for (let i = 0; i < allPlayers.length; i++) {
 			if (used.has(i)) continue;
 			const p1 = allPlayers[i];
@@ -1086,23 +986,14 @@ Singleton {
 	property bool isPlaying: this.activePlayer && this.activePlayer.isPlaying;
 	property bool canTogglePlaying: this.activePlayer?.canTogglePlaying ?? false;
 	function togglePlaying(): void {
-		if (root.isYtMusicActive && YtMusic.currentVideoId) {
-			YtMusic.togglePlaying();
-		} else if (this.canTogglePlaying) {
+		if (this.canTogglePlaying)
 			this.activePlayer.togglePlaying();
-		}
 	}
 
-	property bool canGoPrevious: (root.isYtMusicActive && YtMusic.currentVideoId)
-		? YtMusic.canGoPrevious
-		: root.canGoPreviousForPlayer(this.activePlayer);
+	property bool canGoPrevious: root.canGoPreviousForPlayer(this.activePlayer);
 	function previous(): bool {
 		let accepted = false;
-		if (root.isYtMusicActive && YtMusic.currentVideoId && YtMusic.canGoPrevious) {
-			this.__reverse = true;
-			YtMusic.playPrevious();
-			accepted = true;
-		} else if (root.canGoPreviousForPlayer(this.activePlayer)) {
+		if (root.canGoPreviousForPlayer(this.activePlayer)) {
 			this.__reverse = true;
 			accepted = root.previousForPlayer(this.activePlayer, false);
 		}
@@ -1111,16 +1002,10 @@ Singleton {
 		return accepted;
 	}
 
-	property bool canGoNext: (root.isYtMusicActive && YtMusic.currentVideoId)
-		? YtMusic.canGoNext
-		: root.canGoNextForPlayer(this.activePlayer);
+	property bool canGoNext: root.canGoNextForPlayer(this.activePlayer);
 	function next(): bool {
 		let accepted = false;
-		if (root.isYtMusicActive && YtMusic.currentVideoId && YtMusic.canGoNext) {
-			this.__reverse = false;
-			YtMusic.playNext();
-			accepted = true;
-		} else if (root.canGoNextForPlayer(this.activePlayer)) {
+		if (root.canGoNextForPlayer(this.activePlayer)) {
 			this.__reverse = false;
 			accepted = root.nextForPlayer(this.activePlayer, false);
 		}
@@ -1421,8 +1306,6 @@ Singleton {
 
 	readonly property var activePlayerStreamNode: root.streamNodeForPlayer(root.activePlayer)
 	readonly property real volume: {
-		if (root.isYtMusicActive && YtMusic.currentVideoId)
-			return YtMusic.getVolume();
 		const node = root.activePlayerStreamNode;
 		if (root._streamIsBound(node)) {
 			const nodeVolume = node.audio.volume;
@@ -1433,8 +1316,7 @@ Singleton {
 			return Math.max(0, Math.min(1, root.activePlayer.volume));
 		return 0;
 	}
-	readonly property bool canChangeVolume: (root.isYtMusicActive && YtMusic.currentVideoId)
-		|| root._streamIsBound(root.activePlayerStreamNode)
+	readonly property bool canChangeVolume: root._streamIsBound(root.activePlayerStreamNode)
 		|| !!(root.activePlayer && root.activePlayer.volumeSupported && root.activePlayer.canControl);
 
 	function getVolume(): real {
@@ -1443,10 +1325,6 @@ Singleton {
 
 	function setVolume(vol: real): void {
 		const clamped = Math.max(0, Math.min(1, vol));
-		if (root.isYtMusicActive && YtMusic.currentVideoId) {
-			YtMusic.setVolume(clamped);
-			return;
-		}
 		const node = root.activePlayerStreamNode;
 		if (root._streamIsBound(node)) {
 			node.audio.volume = clamped;
@@ -1519,7 +1397,6 @@ Singleton {
 	function effectiveArtUrl(player): string {
 		const direct = root.artUrlOf(player);
 		if (direct.length > 0) return direct;
-		if (AnimeWatch.ownsPlayer(player) && AnimeWatch.playingCover.length > 0) return AnimeWatch.playingCover;
 		const videoId = root._extractYoutubeVideoId(
 			player?.metadata?.["xesam:url"] ?? "");
 		if (videoId.length > 0)
@@ -1538,11 +1415,7 @@ Singleton {
 
 		function playPause(): void {
 			const wasPlaying = root.isPlaying
-			if (root.isYtMusicActive && YtMusic.currentVideoId) {
-				YtMusic.togglePlaying();
-			} else {
-				root.togglePlaying();
-			}
+			root.togglePlaying();
 			if (GlobalStates.userMediaFeedback) {
 				GlobalStates.showMediaAction(wasPlaying ? "pause" : "play");
 			}

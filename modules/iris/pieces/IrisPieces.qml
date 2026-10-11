@@ -48,11 +48,7 @@ QtObject {
         { id: "workspaces", label: "Workspaces", description: "This output's workspaces; tap for Overview or a workspace card.", card: true },
         { id: "updates", label: "Updates", description: "How many packages are waiting; its card checks and opens them.", card: true },
         { id: "vpn", label: "VPN", description: "Whether you are on a VPN, as a shield that fills when you are. Its card lists your NetworkManager profiles and Tailscale, and turns any of them on or off.", card: true },
-        { id: "shellUpdate", label: "New iNiR", description: "Shows up on its own when there is a new iNiR upstream, and goes away once you update. Its card says what changed and updates from there.", card: true },
-        { id: "anime", label: "Airing", description: "The anime episode airing next, as its cover art and the time left. Its card lists what is coming and follows the shows you tap.", card: true,
-            keywords: ["anime", "weeb", "otaku", "airing", "japanese", "japones", "tracker", "following", "siguiendo", "episodes", "episodios", "episodio", "schedule", "calendario", "ver", "ani-cli", "ani cli"] },
-        { id: "watching", label: "Continue", description: "Watch anime without a terminal: search, pick an episode and pick up where you stopped. ani-cli finds it; iRiS plays it.", card: true,
-            keywords: ["anime", "weeb", "otaku", "continue", "continuar", "resume", "reanudar", "watching", "viendo", "seguir viendo", "history", "historial", "episode", "episodio", "ani-cli", "ani cli", "jerry", "curd", "last watched", "ver", "watch anime", "mirar anime", "ver anime", "search", "buscar", "player", "reproductor", "mpv", "dub", "subtitles"] }
+        { id: "shellUpdate", label: "New iNiR", description: "Shows up on its own when there is a new iNiR upstream, and goes away once you update. Its card says what changed and updates from there.", card: true }
     ]
     readonly property var slotIds: root.slots.map(piece => piece.id)
     readonly property var extraIds: root.extras.map(piece => piece.id)
@@ -201,21 +197,15 @@ QtObject {
         if (id === "updates") return Updates.available
         if (id === "shellUpdate") return ShellUpdates.showUpdate || ShellUpdates.isUpdating
         if (id === "vpn") return Vpn.available
-        if (id === "watching") return AnimeWatch.available
         return root.extraIds.includes(id)
     }
-    // What a piece needs from outside iNiR, as one line for the moment its
-    // backend is missing: the capability stays visible without its tool.
-    readonly property var dependencyHints: ({ watching: "Install ani-cli to search and watch anime from here." })
-    function dependencyHint(id: string): string {
-        if (id === "watching" && !(AnimeWatch.enabled && AnimeWatch.detected)) return ""
-        return root.available(id) ? "" : String(root.dependencyHints[id] ?? "")
-    }
+    // What a piece needs from outside the shell, as one line for the moment its backend is missing.
+    function dependencyHint(id: string): string { return "" }
 
     // Pieces whose resting face is a glyph, so it can be chosen. Pieces that draw a
     // figure, a ring or a count (clock, battery, sound, network strength…) are left
     // out: their face carries state, not an affordance.
-    readonly property var iconKinds: ["controls", "tools", "focus", "notifications", "bluetooth", "updates", "anime", "watching"]
+    readonly property var iconKinds: ["controls", "tools", "focus", "notifications", "bluetooth", "updates"]
     readonly property var icons: Config.options?.iris?.pieces?.icons ?? []
     function defaultGlyph(kind: string): string {
         if (kind === "controls") return Network.wifiEnabled ? "wifi" : "tune"
@@ -224,8 +214,6 @@ QtObject {
         if (kind === "notifications") return "notifications"
         if (kind === "bluetooth") return "bluetooth"
         if (kind === "updates") return "task_alt"
-        if (kind === "anime") return "live_tv"
-        if (kind === "watching") return "resume"
         return ""
     }
     // stateGlyph is the piece's own variant for the state it is in; a chosen glyph
@@ -246,46 +234,6 @@ QtObject {
         const value = String(glyph ?? "").trim()
         if (value.length > 0) next.push({ kind: kind, glyph: value })
         Config.setNestedValue("iris.pieces.icons", next)
-    }
-
-    // What is airing next, newest first. Bound to the shared clock so a show that has
-    // already aired drops off on the next minute instead of lingering until a refetch.
-    readonly property var animeUpcoming: {
-        const now = DateTime.clock.date.getTime() / 1000
-        return (AnimeService.topAiring ?? [])
-            .filter(entry => entry && Number(entry.airingAt ?? 0) > now)
-            .sort((a, b) => Number(a.airingAt) - Number(b.airingAt))
-    }
-    readonly property var animeFollowing: (Config.options?.iris?.anime?.following ?? []).map(id => Number(id))
-    function animeFollows(id: real): bool { return root.animeFollowing.includes(Number(id)) }
-    function animeToggleFollow(id: real): void {
-        const value = Number(id)
-        const next = root.animeFollows(value)
-            ? root.animeFollowing.filter(entry => entry !== value)
-            : root.animeFollowing.concat([value])
-        Config.setNestedValue("iris.anime.following", next)
-    }
-    // What you follow comes first; with nothing followed the piece falls back to
-    // whatever airs next, so it says something useful before you have taught it anything.
-    readonly property var animeFollowed: root.animeUpcoming.filter(entry => root.animeFollows(entry.id))
-    readonly property var animeNext: root.animeFollowed[0] ?? root.animeUpcoming[0] ?? null
-    function animeWait(airingAt: real): string {
-        const left = Number(airingAt) - DateTime.clock.date.getTime() / 1000
-        if (left <= 0) return "now"
-        if (left < 3600) return Math.max(1, Math.round(left / 60)) + "m"
-        const hours = Math.round(left / 3600)
-        if (hours < 24) return hours + "h"
-        return Math.max(1, Math.round(left / 86400)) + "d"
-    }
-    // How close the next episode is, as a share of the gap it is crossing: a weekly
-    // show fills its ring over the week, a daily one over the day. The ring is how a
-    // piece carries a quantity; the exact wait is text, and text belongs in the card.
-    readonly property int animeWeek: 7 * 86400
-    function animeApproach(airingAt: real): real {
-        const left = Number(airingAt) - DateTime.clock.date.getTime() / 1000
-        if (left <= 0) return 1
-        const span = left > root.animeWeek ? left : root.animeWeek
-        return Math.max(0, Math.min(1, 1 - left / span))
     }
 
     readonly property string appPrefix: "app:"

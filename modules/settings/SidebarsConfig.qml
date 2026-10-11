@@ -209,15 +209,6 @@ ContentPage {
                 }
             }
 
-            SettingsSwitch {
-                buttonIcon: "folder_open"
-                text: Translation.tr("Open folder after wallpaper download")
-                checked: Config.options.sidebar?.openFolderOnDownload ?? false
-                onCheckedChanged: Config.setNestedValue("sidebar.openFolderOnDownload", checked)
-                StyledToolTip {
-                    text: Translation.tr("Open file manager when downloading wallpapers from Wallhaven or Booru")
-                }
-            }
             }
 
 
@@ -299,15 +290,6 @@ ContentPage {
                     }
                 }
 
-                SettingsSwitch {
-                    buttonIcon: "image"
-                    text: Translation.tr("Wallhaven")
-                    checked: Config.options.sidebar?.wallhaven?.enable ?? true
-                    onCheckedChanged: Config.setNestedValue("sidebar.wallhaven.enable", checked)
-                    StyledToolTip {
-                        text: Translation.tr("Browse and download wallpapers from Wallhaven")
-                    }
-                }
 
                 SettingsSwitch {
                     buttonIcon: "newspaper"
@@ -893,115 +875,9 @@ ContentPage {
             }
 
 
-            ContentSubsection {
-                title: Translation.tr("Gelbooru")
-                visible: (Config.options?.policies?.weeb ?? 0) !== 0
-
-                StyledText {
-                    Layout.fillWidth: true
-                    text: Translation.tr("Gelbooru currently requires account API credentials for API access.")
-                    wrapMode: Text.Wrap
-                    color: Appearance.colors.colSubtext
-                    font.pixelSize: Appearance.font.pixelSize.smaller
-                }
-
-                ConfigRow {
-                    Layout.fillWidth: true
-                    spacing: 6
-
-                    MaterialTextField {
-                        Layout.fillWidth: true
-                        placeholderText: Translation.tr("User ID")
-                        text: Config.options?.sidebar?.booru?.gelbooru?.userId ?? ""
-                        onEditingFinished: Config.setNestedValue("sidebar.booru.gelbooru.userId", text.trim())
-                    }
-
-                    MaterialTextField {
-                        Layout.fillWidth: true
-                        placeholderText: Translation.tr("API key")
-                        echoMode: TextInput.Password
-                        text: Config.options?.sidebar?.booru?.gelbooru?.apiKey ?? ""
-                        onEditingFinished: Config.setNestedValue("sidebar.booru.gelbooru.apiKey", text.trim())
-                    }
-                }
-            }
-
-            ContentSubsection {
-                title: Translation.tr("Booru download paths")
-                visible: (Config.options?.policies?.weeb ?? 0) !== 0
-
-                ContentSubsectionLabel {
-                    text: Translation.tr("SFW download folder (empty = wallpapers dir)")
-                }
-                MaterialTextField {
-                    Layout.fillWidth: true
-                    placeholderText: Directories.wallpapersPath
-                    text: Config.options?.sidebar?.booru?.downloadPath?.sfw ?? ""
-                    onEditingFinished: Config.setNestedValue("sidebar.booru.downloadPath.sfw", text)
-                }
-
-                ContentSubsectionLabel {
-                    text: Translation.tr("NSFW download folder (empty = wallpapers/pepper)")
-                }
-                MaterialTextField {
-                    Layout.fillWidth: true
-                    placeholderText: Directories.wallpapersPath + "/pepper"
-                    text: Config.options?.sidebar?.booru?.downloadPath?.nsfw ?? ""
-                    onEditingFinished: Config.setNestedValue("sidebar.booru.downloadPath.nsfw", text)
-                }
-            }
 
 
-            ContentSubsection {
-                title: Translation.tr("Wallhaven")
-                visible: Config.options.sidebar?.wallhaven?.enable ?? true
 
-                ConfigSpinBox {
-                    icon: "format_list_numbered"
-                    text: Translation.tr("Results per page")
-                    value: Config.options.sidebar?.wallhaven?.limit ?? 24
-                    from: 12
-                    to: 72
-                    stepSize: 4
-                    onValueChanged: Config.setNestedValue("sidebar.wallhaven.limit", value)
-                    StyledToolTip {
-                        text: Translation.tr("Number of wallpapers to fetch per request")
-                    }
-                }
-
-                ConfigRow {
-                    Layout.fillWidth: true
-                    spacing: 6
-
-                    MaterialSymbol {
-                        text: "key"
-                        iconSize: Appearance.font.pixelSize.larger
-                        color: Appearance.colors.colSubtext
-                    }
-                    StyledText {
-                        text: Translation.tr("API key")
-                        font.pixelSize: Appearance.font.pixelSize.small
-                        color: Appearance.colors.colOnSurface
-                    }
-                    MaterialTextField {
-                        id: wallhavenApiInput
-                        Layout.fillWidth: true
-                        placeholderText: Translation.tr("Optional - for NSFW content")
-                        font.pixelSize: Appearance.font.pixelSize.small
-                        color: Appearance.colors.colOnSurface
-                        placeholderTextColor: Appearance.colors.colSubtext
-                        echoMode: TextInput.Password
-                        text: Config.options.sidebar?.wallhaven?.apiKey ?? ""
-                        background: Rectangle {
-                            color: Appearance.colors.colLayer1
-                            radius: Appearance.rounding.small
-                            border.width: wallhavenApiInput.activeFocus ? 2 : 1
-                            border.color: wallhavenApiInput.activeFocus ? Appearance.colors.colPrimary : Appearance.colors.colLayer0Border
-                        }
-                        onTextChanged: Config.setNestedValue("sidebar.wallhaven.apiKey", text)
-                    }
-                }
-            }
 
         }
     }

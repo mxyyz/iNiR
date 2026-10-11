@@ -39,8 +39,6 @@ Singleton {
 
     function _basePath(widgetKey): string {
         const key = root._widgetKey(widgetKey)
-        if (key === "waffle.clock")
-            return "waffles.background.widgets.clock"
         return key ? "background.widgets." + key : ""
     }
 

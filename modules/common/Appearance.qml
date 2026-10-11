@@ -157,7 +157,7 @@ Singleton {
             return compositorBlurActive && topologyExact ? "compositor" : "wallpaper"
         // Auto is fidelity-first. Native blur is an explicit backend choice,
         // never a reason to replace a style-owned wallpaper material.
-        if (area === "islands" || area === "waffle")
+        if (area === "islands")
             return "wallpaper"
         if (auroraEverywhere || angelEverywhere)
             return "wallpaper"

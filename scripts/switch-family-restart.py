@@ -18,7 +18,7 @@ import tempfile
 import time
 
 
-VALID_FAMILIES = {"ii", "waffle", "iris"}
+VALID_FAMILIES = {"ii", "iris"}
 
 
 def _inir_path() -> str:

@@ -9,8 +9,6 @@ import qs.services
 Singleton {
     id: root
 
-    readonly property bool sortingEnabled:
-        (Config.options?.panelFamily ?? "ii") === "waffle"
     property int _identityRulesRevision: 0
     readonly property var apps: _apps
     property var _apps: []
@@ -56,18 +54,7 @@ Singleton {
         appsRebuildTimer.restart()
     }
 
-    function syncSortingDemand(): void {
-        CompositorService.setSortingConsumer("waffleTaskbar",
-            root.sortingEnabled)
-    }
-
-    onSortingEnabledChanged: syncSortingDemand()
-    Component.onCompleted: {
-        syncSortingDemand()
-        scheduleAppsRebuild()
-    }
-    Component.onDestruction:
-        CompositorService.setSortingConsumer("waffleTaskbar", false)
+    Component.onCompleted: scheduleAppsRebuild()
 
     // The dock keys apps by lowercase id while the pinned list keeps the desktop entry's
     // case (org.gnome.Nautilus): an exact match missed it, so Unpin pinned it a second time.

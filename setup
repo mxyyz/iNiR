@@ -948,18 +948,6 @@ show_status_environment() {
             fi
         done
         [[ -n "$qs_pkg" ]] && tui_table_row "QS Package" "$qs_pkg" 22 42
-    elif command -v xbps-query >/dev/null 2>&1 \
-            && xbps-query -p pkgver quickshell >/dev/null 2>&1; then
-        local qs_pkgver qs_repo
-        qs_pkgver="$(xbps-query -p pkgver quickshell 2>/dev/null || true)"
-        qs_repo="$(xbps-query -p repository quickshell 2>/dev/null || true)"
-        if [[ -n "$qs_pkgver" ]]; then
-            if [[ -n "$qs_repo" ]]; then
-                tui_table_row "QS Package" "${qs_pkgver} (repo: ${qs_repo})" 22 42
-            else
-                tui_table_row "QS Package" "$qs_pkgver (XBPS)" 22 42
-            fi
-        fi
     fi
 
     # Qt build-time vs runtime (the ABI mismatch witness)
@@ -1584,9 +1572,6 @@ run_extras() {
         "${ICON_DOT}|Install YAMIS icons|Install/update yet-another-monochrome-icon-set (GPL-3, ~23 MiB)"
         "${ICON_DOT}|Install mascot pack|Kira mascot art pack (optional download, feature stays opt-in)"
     )
-    if [[ "${OS_GROUP_ID:-}" == void ]]; then
-        extra_choices+=("${ICON_DOT}|Install/update Cloudflare WARP|Void glibc x86_64 only; official Cloudflare package, optional")
-    fi
     extra_choices+=(
         "${ICON_DOT}|Install all|Run all non-networking optional installers"
         "${ICON_CIRCLE}|Back|Return to main menu"
@@ -1609,10 +1594,6 @@ run_extras() {
         "Install mascot pack")
             echo ""
             extras_install_mascot_pack
-            ;;
-        "Install/update Cloudflare WARP")
-            echo ""
-            extras_install_void_warp
             ;;
         "Install all")
             echo ""
@@ -1703,9 +1684,7 @@ show_reboot_notice() {
     local reasons=("${INIR_REBOOT_REASONS[@]}") reason
     local bar="══════════════════════════════════════════════════════════════"
     local reboot_cmd="systemctl reboot"
-    if [[ "${OS_GROUP_ID:-}" == void ]]; then
-        reboot_cmd="loginctl reboot"
-    elif ! command -v systemctl >/dev/null 2>&1 && command -v loginctl >/dev/null 2>&1; then
+    if ! command -v systemctl >/dev/null 2>&1 && command -v loginctl >/dev/null 2>&1; then
         reboot_cmd="loginctl reboot"
     fi
     echo ""
@@ -1937,21 +1916,6 @@ run_install() {
 
     echo ""
     show_install_completion
-
-    # On Void, enabling a runit service starts it immediately. NetworkManager
-    # may replace the installer-provided dhcpcd/wpa_supplicant stack and briefly
-    # interrupt networking, while SDDM may take over the display. Offer both
-    # only after every install task and version-tracking write has completed.
-    if [[ "${OS_GROUP_ID:-}" == void ]]; then
-        echo ""
-        if ! configure_void_networkmanager_service; then
-            tui_warn "NetworkManager could not be enabled; existing Void networking was preserved when possible"
-        fi
-        echo ""
-        if ! configure_void_sddm_service; then
-            tui_warn "SDDM could not be enabled; use 'niri --session' from a local TTY and inspect the SDDM service"
-        fi
-    fi
 }
 
 ###############################################################################
@@ -2440,7 +2404,6 @@ run_update() {
         refresh_sddm_theme_on_update "$ask"
         extras_refresh_yamis_icons_on_update
         extras_refresh_mascot_pack_on_update
-        extras_refresh_void_warp_on_update
 
         echo ""
         tui_success "Package-managed installation left unchanged"
@@ -2757,7 +2720,6 @@ run_update() {
     refresh_sddm_theme_on_update "$ask"
     extras_refresh_yamis_icons_on_update
     extras_refresh_mascot_pack_on_update
-    extras_refresh_void_warp_on_update
 
     # Update Vesktop themes (themes live outside quickshell/ii tree)
     if [[ -d "${REPO_ROOT}/dots/.config/vesktop/themes" ]]; then
@@ -2919,10 +2881,6 @@ run_update() {
     # Run after dependency repair so newly installed providers get supervised
     # during the same update.
     source "$REPO_ROOT/sdata/lib/functions.sh" 2>/dev/null || true
-    if [[ "${OS_GROUP_ID:-}" == void ]] && ! configure_void_ydotool_uinput; then
-        tui_error "Could not configure the ydotool provider"
-        return 1
-    fi
     if ! reconcile_inir_supervisor >/dev/null; then
         tui_error "Could not reconcile the iNiR supervisor"
         return 1
@@ -2983,11 +2941,9 @@ run_update() {
     #     fi
     # fi
 
-    # Keep update semantics identical to fresh install: the managed Python venv
-    # owns ytmusicapi, and Deno is repaired as part of the YT playback runtime.
-    _step_phase_header 6 "Python / YT runtime"
+    # Keep update semantics identical to fresh install.
+    _step_phase_header 6 "Python runtime"
     install-python-packages
-    ensure-ytmusic-js-runtime
 
     # Signal success to the shell UI before restart
     _write_update_status "success"

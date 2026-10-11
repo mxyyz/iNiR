@@ -102,11 +102,10 @@ Item {
     readonly property var player: MprisController.activePlayer
     readonly property bool hasMedia: root.player !== null && root.player !== undefined
         && String(MprisController.titleOf(root.player) ?? "").length > 0
-    readonly property bool ytMusic: root.hasMedia && MprisController._isYtMusicMpv(root.player)
-    readonly property string title: root.ytMusic ? YtMusic.currentTitle : String(MprisController.titleOf(root.player) ?? "")
-    readonly property bool playing: root.hasMedia && (root.ytMusic ? YtMusic.isPlaying : (root.player?.isPlaying ?? false))
-    readonly property real effectivePosition: root.ytMusic ? YtMusic.currentPosition : MprisController.positionOf(root.player)
-    readonly property real effectiveLength: root.ytMusic ? YtMusic.currentDuration : MprisController.lengthOf(root.player)
+    readonly property string title: String(MprisController.titleOf(root.player) ?? "")
+    readonly property bool playing: root.hasMedia && ((root.player?.isPlaying ?? false))
+    readonly property real effectivePosition: MprisController.positionOf(root.player)
+    readonly property real effectiveLength: MprisController.lengthOf(root.player)
     readonly property real trackProgress: root.effectiveLength > 0
         ? Math.max(0, Math.min(1, root.effectivePosition / root.effectiveLength)) : 0
 
@@ -501,7 +500,7 @@ Item {
         root.showEvent(action === "next" ? "skip_next" : action === "previous" ? "skip_previous"
             : action === "pause" ? "pause" : action === "play" ? "play_arrow" : "music_note", IrisStyle.accent,
             title.length > 0 ? title : Translation.tr("Now playing"),
-            root.ytMusic ? YtMusic.currentArtist : String(MprisController.artistOf(root.player) ?? ""), -1)
+            String(MprisController.artistOf(root.player) ?? ""), -1)
     }
     Connections {
         target: root.eventsEnabled ? KeyboardIndicators : null
@@ -1058,7 +1057,7 @@ Item {
     Timer {
         interval: 1000
         repeat: true
-        running: root.playing && !root.ytMusic
+        running: root.playing
         onTriggered: root.player?.positionChanged()
     }
     Connections {
@@ -1755,7 +1754,7 @@ Item {
                     IrisText {
                         Layout.fillWidth: true
                         visible: root.zoned && text.length > 0
-                        text: root.ytMusic ? YtMusic.currentArtist : String(MprisController.artistOf(root.player) ?? "")
+                        text: String(MprisController.artistOf(root.player) ?? "")
                         color: IrisStyle.subtext
                         font.pixelSize: IrisStyle.typeFootnote
                         elide: Text.ElideRight

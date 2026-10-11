@@ -17,9 +17,7 @@ terminalscheme="$SCRIPT_DIR/terminal/scheme-base.json"
 # Validate critical runtime dependencies early
 if ! command -v jq &>/dev/null; then
     echo "[switchwall.sh] Missing required dependency: jq"
-    if command -v xbps-install >/dev/null 2>&1; then
-        echo "  Void: sudo xbps-install -S jq"
-    elif command -v pacman >/dev/null 2>&1; then
+    if command -v pacman >/dev/null 2>&1; then
         echo "  Arch: sudo pacman -S jq"
     else
         echo "  Install jq with your package manager."
@@ -249,15 +247,10 @@ get_focused_monitor_name() {
             else null end;
         def main_path: (monitor_entry.path // .background.wallpaperPath // "");
         def monitor_backdrop: (monitor_entry.backdropPath // "");
-        def waffle_main: (if (.waffles.background.useMainWallpaper // "true") == true then main_path else (.waffles.background.wallpaperPath // main_path) end);
         if (.appearance.wallpaperTheming.useBackdropForColors // false) then
-            if (.panelFamily // "ii") == "waffle" then
-                (if (.waffles.background.backdrop.useMainWallpaper // "true") == true then waffle_main else (.waffles.background.backdrop.wallpaperPath // waffle_main) end)
-            else
-                (if monitor_backdrop != "" then monitor_backdrop else (if (.background.backdrop.useMainWallpaper // "true") == true then main_path else (.background.backdrop.wallpaperPath // main_path) end) end)
-            end
+            (if monitor_backdrop != "" then monitor_backdrop else (if (.background.backdrop.useMainWallpaper // "true") == true then main_path else (.background.backdrop.wallpaperPath // main_path) end) end)
         else
-            if (.panelFamily // "ii") == "waffle" then waffle_main else main_path end
+            main_path
         end // ""
     ' "$SHELL_CONFIG_FILE" 2>/dev/null || echo ""
  }
@@ -404,18 +397,7 @@ switch() {
             # mpvpaper is no longer needed - Qt Multimedia handles video playback natively
             if ! command -v ffmpeg &> /dev/null; then
                 echo "Missing dependency: ffmpeg"
-                if command -v xbps-install >/dev/null 2>&1; then
-                    echo "Void: sudo xbps-install -S ffmpeg"
-                    action=$(notify-send \
-                        -a "Wallpaper switcher" \
-                        -c "im.error" \
-                        -A "install_void=Install (Void)" \
-                        "Can't switch to video wallpaper" \
-                        "Missing dependency: ffmpeg (needed for thumbnail generation)")
-                    if [[ "$action" == "install_void" ]]; then
-                        kitty -1 sudo xbps-install -S ffmpeg
-                    fi
-                elif command -v pacman >/dev/null 2>&1; then
+                if command -v pacman >/dev/null 2>&1; then
                     echo "Arch: sudo pacman -S ffmpeg"
                     action=$(notify-send \
                         -a "Wallpaper switcher" \
@@ -501,19 +483,10 @@ switch() {
     # Shell/UI colors follow the requested real mode.
     # Terminal colors may optionally force dark mode, but that must not darken the shell palette.
     # If useBackdropForColors is enabled, override color source to use backdrop wallpaper
-    # Respects active panel family: ii reads from background.backdrop, waffle from waffles.background.backdrop
     if [[ "$color_flag" != "1" ]]; then
         if [[ "$cfg_use_backdrop" == "true" ]]; then
-            local backdrop_use_main=""
-            local backdrop_path=""
-
-            if [[ "$cfg_panel_family" == "waffle" ]]; then
-                backdrop_use_main="$cfg_waffle_backdrop_use_main"
-                backdrop_path="$cfg_waffle_backdrop_path"
-            else
-                backdrop_use_main="$cfg_ii_backdrop_use_main"
-                backdrop_path="$cfg_ii_backdrop_path"
-            fi
+            local backdrop_use_main="$cfg_ii_backdrop_use_main"
+            local backdrop_path="$cfg_ii_backdrop_path"
 
             if [[ "$backdrop_use_main" != "true" && -n "$backdrop_path" && -f "$backdrop_path" ]]; then
                 echo "[switchwall.sh] Using backdrop wallpaper for color generation ($cfg_panel_family): $backdrop_path"
@@ -717,8 +690,6 @@ main() {
             (.background.thumbnailPath // ""),
             (.appearance.wallpaperTheming.useBackdropForColors // false),
             (.panelFamily // "ii"),
-            (.waffles.background.backdrop.useMainWallpaper // true),
-            (.waffles.background.backdrop.wallpaperPath // ""),
             (.background.backdrop.useMainWallpaper // true),
             (.background.backdrop.wallpaperPath // ""),
             (.appearance.wallpaperTheming.enableAppsAndShell // true),
@@ -748,28 +719,26 @@ main() {
     cfg_thumbnail_path="${_cfg[4]:-}"
     cfg_use_backdrop="${_cfg[5]:-false}"
     cfg_panel_family="${_cfg[6]:-ii}"
-    cfg_waffle_backdrop_use_main="${_cfg[7]:-true}"
-    cfg_waffle_backdrop_path="${_cfg[8]:-}"
-    cfg_ii_backdrop_use_main="${_cfg[9]:-true}"
-    cfg_ii_backdrop_path="${_cfg[10]:-}"
-    cfg_enable_apps_shell="${_cfg[11]:-true}"
-    cfg_enable_terminal="${_cfg[12]:-true}"
-    cfg_term_saturation="${_cfg[13]:-0.65}"
-    cfg_term_brightness="${_cfg[14]:-0.60}"
-    cfg_term_harmony="${_cfg[15]:-0.40}"
-    cfg_term_bg_brightness="${_cfg[16]:-0.50}"
-    cfg_color_strength="${_cfg[17]:-1.0}"
-    cfg_harmonize_threshold="${_cfg[18]:-100}"
-    cfg_term_fg_boost="${_cfg[19]:-0.35}"
-    cfg_soften_colors="${_cfg[20]:-null}"
-    cfg_force_dark_terminal="${_cfg[21]:-false}"
-    cfg_enable_vesktop="${_cfg[22]:-true}"
-    cfg_hide_upscale="${_cfg[23]:-false}"
-    cfg_preferred_darkmode="${_cfg[24]:-true}"
-    cfg_auto_dark_light="${_cfg[25]:-false}"
-    cfg_color_invert="${_cfg[26]:-false}"
-    cfg_iris_scheme="${_cfg[27]:-auto}"
-    cfg_iris_material_apps="${_cfg[28]:-true}"
+    cfg_ii_backdrop_use_main="${_cfg[7]:-true}"
+    cfg_ii_backdrop_path="${_cfg[8]:-}"
+    cfg_enable_apps_shell="${_cfg[9]:-true}"
+    cfg_enable_terminal="${_cfg[10]:-true}"
+    cfg_term_saturation="${_cfg[11]:-0.65}"
+    cfg_term_brightness="${_cfg[12]:-0.60}"
+    cfg_term_harmony="${_cfg[13]:-0.40}"
+    cfg_term_bg_brightness="${_cfg[14]:-0.50}"
+    cfg_color_strength="${_cfg[15]:-1.0}"
+    cfg_harmonize_threshold="${_cfg[16]:-100}"
+    cfg_term_fg_boost="${_cfg[17]:-0.35}"
+    cfg_soften_colors="${_cfg[18]:-null}"
+    cfg_force_dark_terminal="${_cfg[19]:-false}"
+    cfg_enable_vesktop="${_cfg[20]:-true}"
+    cfg_hide_upscale="${_cfg[21]:-false}"
+    cfg_preferred_darkmode="${_cfg[22]:-true}"
+    cfg_auto_dark_light="${_cfg[23]:-false}"
+    cfg_color_invert="${_cfg[24]:-false}"
+    cfg_iris_scheme="${_cfg[25]:-auto}"
+    cfg_iris_material_apps="${_cfg[26]:-true}"
 
     set_accent_color() {
         local color="$1"
@@ -877,7 +846,7 @@ main() {
 
     # --noswitch should regenerate from the current effective theming source.
     # If no explicit image was passed, force resolution now so family-specific
-    # wallpapers (e.g. waffle.background.wallpaperPath) are honored.
+    # wallpapers are honored.
     if [[ -z "$imgpath" && -n "$noswitch_flag" && -z "$color_flag" ]]; then
         imgpath="$(resolve_effective_theming_wallpaper)"
     fi

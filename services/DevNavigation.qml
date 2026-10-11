@@ -17,7 +17,6 @@ Singleton {
         { id: "sidebar-left/translator", family: "shared", surface: "sidebar-left", view: "translator", safe: true, settleMs: 350 },
         { id: "sidebar-left/anime", family: "shared", surface: "sidebar-left", view: "anime", safe: true, settleMs: 450 },
         { id: "sidebar-left/anime-schedule", family: "shared", surface: "sidebar-left", view: "anime-schedule", safe: true, settleMs: 500 },
-        { id: "sidebar-left/wallhaven", family: "shared", surface: "sidebar-left", view: "wallhaven", safe: true, settleMs: 450 },
         { id: "sidebar-left/news", family: "shared", surface: "sidebar-left", view: "news", safe: true, settleMs: 500 },
         { id: "sidebar-left/ytmusic", family: "shared", surface: "sidebar-left", view: "ytmusic", safe: true, settleMs: 450 },
         { id: "sidebar-left/tools", family: "shared", surface: "sidebar-left", view: "tools", safe: true, settleMs: 350 },
@@ -47,19 +46,11 @@ Singleton {
         { id: "tiling/osd", family: "shared", surface: "tiling", view: "osd", safe: true, settleMs: 350 },
         { id: "iris/palette", family: "iris", surface: "iris-palette", view: "", safe: true, settleMs: 300 },
         { id: "iris/controls", family: "iris", surface: "iris-controls", view: "", safe: true, settleMs: 300 },
-        { id: "iris/session", family: "iris", surface: "iris-session", view: "", safe: true, settleMs: 300 },
-        { id: "waffle/start", family: "waffle", surface: "waffle-search", view: "start", safe: true, settleMs: 350 },
-        { id: "waffle/all-apps", family: "waffle", surface: "waffle-search", view: "all-apps", safe: true, settleMs: 350 },
-        { id: "waffle/search", family: "waffle", surface: "waffle-search", view: "search", safe: true, settleMs: 450 },
-        { id: "waffle/action-center", family: "waffle", surface: "waffle-action-center", view: "", safe: true, settleMs: 350 },
-        { id: "waffle/notification-center", family: "waffle", surface: "waffle-notification-center", view: "", safe: true, settleMs: 350 },
-        { id: "waffle/widgets", family: "waffle", surface: "waffle-widgets", view: "", safe: true, settleMs: 350 },
-        { id: "waffle/taskview", family: "waffle", surface: "waffle-taskview", view: "", safe: true, settleMs: 450 }
+        { id: "iris/session", family: "iris", surface: "iris-session", view: "", safe: true, settleMs: 300 }
     ]
     property var settingsDestinations: []
     readonly property var destinations: baseDestinations.concat(settingsDestinations)
     property string currentDestination: ""
-    property string requestedWaffleStartView: "start"
 
     function registerSettingsPages(pages): void {
         const out = []
@@ -93,12 +84,7 @@ Singleton {
         GlobalStates.tilingOverlayOsdOpen = false
         GlobalStates.settingsOverlayOpen = false
         GlobalStates.searchOpen = false
-        GlobalStates.waffleActionCenterOpen = false
-        GlobalStates.waffleNotificationCenterOpen = false
-        GlobalStates.waffleWidgetsOpen = false
-        GlobalStates.waffleTaskViewOpen = false
         GlobalStates.sidebarRightRequestedWidget = ""
-        requestedWaffleStartView = "start"
         LauncherSearch.query = ""
         currentDestination = ""
     }
@@ -139,22 +125,8 @@ Singleton {
         case "iris-controls": GlobalStates.controlPanelOpen = true; break
         case "iris-session": GlobalStates.sessionOpen = true; break
         case "settings":
-            if ((Config.options?.panelFamily ?? "ii") === "waffle"
-                    && Config.options?.waffles?.settings?.useMaterialStyle !== true) {
-                currentDestination = ""
-                return "error:material-settings-page-unavailable-in-waffle"
-            }
             GlobalStates.openSettingsPage(entry.pageIndex ?? -1)
             break
-        case "waffle-search":
-            requestedWaffleStartView = entry.view
-            LauncherSearch.query = entry.view === "search" ? "a" : ""
-            GlobalStates.searchOpen = true
-            break
-        case "waffle-action-center": GlobalStates.waffleActionCenterOpen = true; break
-        case "waffle-notification-center": GlobalStates.waffleNotificationCenterOpen = true; break
-        case "waffle-widgets": GlobalStates.waffleWidgetsOpen = true; break
-        case "waffle-taskview": GlobalStates.waffleTaskViewOpen = true; break
         default: currentDestination = ""; return "error:unsupported-surface"
         }
         return "ok:" + destination

@@ -224,13 +224,6 @@ Item {
                         : Appearance.auroraEverywhere ? Appearance.aurora.colSubSurfaceActive : Appearance.colLayer1Active
 
                     onClicked: {
-                        const isWaffle = (Config.options?.panelFamily === "waffle" && Config.options?.waffles?.settings?.useMaterialStyle !== true);
-                        if (isWaffle) {
-                            Quickshell.execDetached(["/usr/bin/env", "QS_SETTINGS_PAGE=6",
-                                "QS_SETTINGS_SECTION=" + Translation.tr("Widgets Panel"),
-                                Quickshell.shellPath("scripts/inir"), "waffle-settings-window"]);
-                            return;
-                        }
                         GlobalStates.openSettingsPage(5, Translation.tr("Widgets"));
                     }
 

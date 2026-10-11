@@ -915,7 +915,7 @@ ContentPage {
             ContentSubsection {
                 visible: Config.options?.lock?.notifications?.enable ?? false
                 title: Translation.tr("Notification position")
-                tooltip: Translation.tr("Auto centres on Material, right-aligns on Waffle.")
+                tooltip: Translation.tr("Auto centres the popup.")
 
                 ConfigSelectionArray {
                     currentValue: Config.options?.lock?.notifications?.position ?? "auto"

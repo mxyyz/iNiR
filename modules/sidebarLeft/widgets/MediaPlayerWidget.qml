@@ -19,16 +19,15 @@ Item {
     visible: hasPlayer
 
     property MprisPlayer player: MprisController.activePlayer
-    readonly property bool isYtMusicPlayer: MprisController.isYtMusicActive
-    readonly property bool hasPlayer: (player && MprisController.titleOf(player)) || (isYtMusicPlayer && YtMusic.currentVideoId)
+    readonly property bool hasPlayer: player && MprisController.titleOf(player)
     
-    readonly property string effectiveTitle: isYtMusicPlayer ? YtMusic.currentTitle : (MprisController.titleOf(player) ?? "")
-    readonly property string effectiveArtist: isYtMusicPlayer ? YtMusic.currentArtist : (MprisController.artistOf(player) ?? "")
-    readonly property string effectiveArtUrl: isYtMusicPlayer ? YtMusic.currentThumbnail : (MprisController.artUrlOf(player) ?? "")
-    readonly property real effectivePosition: isYtMusicPlayer ? YtMusic.currentPosition : MprisController.positionOf(player)
-    readonly property real effectiveLength: isYtMusicPlayer ? YtMusic.currentDuration : MprisController.lengthOf(player)
-    readonly property bool effectiveIsPlaying: isYtMusicPlayer ? YtMusic.isPlaying : (player?.isPlaying ?? false)
-    readonly property bool effectiveCanSeek: isYtMusicPlayer ? YtMusic.canSeek : (player?.canSeek ?? false)
+    readonly property string effectiveTitle: (MprisController.titleOf(player) ?? "")
+    readonly property string effectiveArtist: (MprisController.artistOf(player) ?? "")
+    readonly property string effectiveArtUrl: (MprisController.artUrlOf(player) ?? "")
+    readonly property real effectivePosition: MprisController.positionOf(player)
+    readonly property real effectiveLength: MprisController.lengthOf(player)
+    readonly property bool effectiveIsPlaying: (player?.isPlaying ?? false)
+    readonly property bool effectiveCanSeek: (player?.canSeek ?? false)
     
     property string artDownloadLocation: Directories.coverArt
     readonly property bool downloaded: MediaArtwork.ready
@@ -51,9 +50,7 @@ Item {
     function seekTo(seconds) {
         if (root.effectiveLength <= 0) return
         const bounded = Math.max(0, Math.min(root.effectiveLength, seconds))
-        if (root.isYtMusicPlayer) {
-            YtMusic.seek(bounded)
-        } else if (root.player) {
+        if (root.player) {
             MprisController.seek(root.player, bounded)
         }
     }
@@ -507,7 +504,7 @@ Item {
         interval: 1000
         repeat: true
         onTriggered: {
-            if (!root.isYtMusicPlayer && root.player) {
+            if (root.player) {
                 root.player.positionChanged()
             }
         }

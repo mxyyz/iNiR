@@ -96,7 +96,6 @@ Usage: inir <command> [options]
 Quick start:
   inir run               Start the shell
   inir settings          Toggle settings
-  inir welcome           Re-open the welcome wizard (first-run tour)
   inir restart           Restart the shell
   inir logs              View runtime logs (--issues: every warning/error since start, grouped; -n N: last N lines; --full: all categories; --debug: foreground debug)
   inir status            Shell status info
@@ -111,7 +110,6 @@ EOF
         printf 'IPC targets (inir <target> <function>):\n'
         _usage_print_targets "  Shared:" "shared"
         _usage_print_targets "  ii panel family:" "ii"
-        _usage_print_targets "  waffle panel family:" "waffle"
         printf '\n  Run '\''inir <target> --help'\'' for available functions.\n\n'
     else
         cat <<'EOF'
@@ -136,7 +134,7 @@ Other:
   completions <bash|zsh|fish|install>
   bind [--add|--remove|--list|--examples] <keys> <call…>   Niri keybinds for any inir call
   service <install|uninstall|enable|disable|start|stop|restart|status|logs>
-  repair, path, test-local, settings-window, waffle-settings-window
+  repair, path, test-local
 EOF
 }
 
@@ -444,8 +442,7 @@ _inir_detect_stale_local_qs() {
 #   arch-git        quickshell-git               -> rebuilt from its AUR recipe
 #   arch-provider   a fork or quickshell-bin providing quickshell
 #                                                -> quickshell from Arch's recipe replaces it (pacman asks)
-#   void-xbps, fedora-pkg, nixos                 -> the distro's own update
-#   debian, source, unknown                      -> no automatic path
+#   source, unknown                              -> no automatic path
 _inir_quickshell_install_kind() {
     if command -v pacman >/dev/null 2>&1; then
         # pacman -Q answers with whichever package provides the name, so read the real one.
@@ -456,20 +453,8 @@ _inir_quickshell_install_kind() {
             quickshell-git) printf 'arch-git:quickshell-git'; return ;;
             ?*)             printf 'arch-provider:%s' "$owner"; return ;;
         esac
-    elif command -v xbps-query >/dev/null 2>&1 \
-            && xbps-query -p pkgver quickshell >/dev/null 2>&1; then
-        printf 'void-xbps:quickshell'; return
-    elif command -v rpm >/dev/null 2>&1; then
-        local q
-        q="$(rpm -qa 2>/dev/null | grep -E '^quickshell(-git)?-[0-9]' | head -1)"
-        if [[ -n "$q" ]]; then
-            printf 'fedora-pkg:%s' "${q%%-[0-9]*}"; return
-        fi
-    elif [[ -d /etc/nixos ]] || [[ -L /run/current-system ]]; then
-        printf 'nixos:quickshell'; return
-    elif command -v dpkg >/dev/null 2>&1 && dpkg -s quickshell &>/dev/null; then
-        printf 'debian:quickshell'; return
-    elif [[ -x /usr/local/bin/quickshell || -x /usr/local/bin/qs ]]; then
+    fi
+    if [[ -x /usr/local/bin/quickshell || -x /usr/local/bin/qs ]]; then
         printf 'source:'; return
     fi
     printf 'unknown:'
@@ -485,9 +470,6 @@ _inir_quickshell_fix_plan() {
         arch-repo)     printf "rebuild quickshell %s from Arch's recipe" "$(pacman -Q quickshell 2>/dev/null | awk '{print $2}')" ;;
         arch-git)      printf 'rebuild quickshell-git from its AUR recipe' ;;
         arch-provider) printf "replace %s with quickshell built from Arch's recipe (pacman asks first)" "$pkg" ;;
-        void-xbps)     printf 'reinstall quickshell with xbps-install' ;;
-        fedora-pkg)    printf 'upgrade %s with dnf' "$pkg" ;;
-        nixos)         printf 'run nixos-rebuild switch --upgrade' ;;
     esac
 }
 
@@ -532,15 +514,10 @@ _inir_quickshell_makepkg() {
 
 # Runs the repair for a kind:pkg pair. $2 = interactive | noninteractive (answers package prompts).
 _inir_quickshell_fix_run() {
-    local kind="${1%%:*}" pkg="${1#*:}" mode="$2"
-    local yes=""
-    [[ "$mode" == noninteractive ]] && yes="-y"
+    local kind="${1%%:*}" mode="$2"
     case "$kind" in
         arch-repo|arch-provider) _inir_quickshell_makepkg "$_INIR_QS_ARCH_RECIPE" "$mode" ;;
         arch-git)                _inir_quickshell_makepkg "$_INIR_QS_AUR_GIT_RECIPE" "$mode" ;;
-        void-xbps)               sudo xbps-install -Sf $yes quickshell ;;
-        fedora-pkg)              sudo dnf upgrade --refresh $yes "$pkg" ;;
-        nixos)                   sudo nixos-rebuild switch --upgrade ;;
         *)                       return 2 ;;
     esac
 }
@@ -2000,33 +1977,6 @@ has_instances() {
     [[ -n "$output" && "$output" != No\ running\ instances* ]]
 }
 
-qml_window_pids() {
-    local qml_path="$1"
-    "$qs_bin" list --all 2>/dev/null | awk -v target="$qml_path" '
-        /^[[:space:]]*Process ID:/ { pid=$3 }
-        /^[[:space:]]*Config path:/ {
-            path=$0
-            sub(/^[[:space:]]*Config path:[[:space:]]*/, "", path)
-            if (path == target && pid != "") print pid
-            pid=""
-        }
-    '
-}
-
-has_qml_window_instance() {
-    [[ -n "$(qml_window_pids "$1")" ]]
-}
-
-terminate_qml_window() {
-    local qml_path="$1"
-    local signal="${2:-TERM}"
-    local pid
-    while IFS= read -r pid; do
-        [[ -n "$pid" ]] || continue
-        kill -s "$signal" "$pid" >/dev/null 2>&1 || true
-    done < <(qml_window_pids "$qml_path")
-}
-
 ensure_running_instance() {
     local dir="$1"
 
@@ -2082,18 +2032,6 @@ wait_for_stop() {
         local output
         output="$(list_instances "$dir")"
         if [[ "$output" == No\ running\ instances* ]]; then
-            return 0
-        fi
-        sleep "$poll_delay"
-    done
-    return 1
-}
-
-wait_for_qml_window_stop() {
-    local qml_path="$1"
-    local poll
-    for ((poll = 0; poll < max_polls; poll++)); do
-        if ! has_qml_window_instance "$qml_path"; then
             return 0
         fi
         sleep "$poll_delay"
@@ -2402,53 +2340,6 @@ toggle_settings() {
     exec "$qs_bin" -p "$dir" ipc call settings toggle
 }
 
-open_detached_qml_window() {
-    local dir="$1"
-    local entry="$2"
-    local mode="${3:-open}"
-    local qml_path="$dir/$entry"
-
-    if [[ ! -f "$qml_path" ]]; then
-        echo "Could not find $entry in $dir" >&2
-        exit 1
-    fi
-
-    # Serialize concurrent launches of the same entry point (e.g. rapid
-    # keyboard-shortcut presses while the shell is unresponsive).  The lock
-    # covers only the check-kill-launch window; it is released before exec
-    # so child processes of qs (e.g. kde-material-you-colors) don't inherit
-    # and leak it.
-    local lock_file="${TMPDIR:-/tmp}/inir-launch-${entry%.qml}.lock"
-    exec 9>"$lock_file"
-    if ! flock -n 9; then
-        echo "$entry launch already in progress" >&2
-        exit 0
-    fi
-
-    if has_qml_window_instance "$qml_path"; then
-        if [[ "$mode" != "toggle" ]]; then
-            exec 9>&-
-            return 0
-        fi
-
-        terminate_qml_window "$qml_path"
-        if ! wait_for_qml_window_stop "$qml_path"; then
-            terminate_qml_window "$qml_path" KILL
-            if ! wait_for_qml_window_stop "$qml_path"; then
-                echo "Timed out waiting for $entry to stop" >&2
-                exit 1
-            fi
-        fi
-        exec 9>&-
-        return 0
-    fi
-
-    apply_qt_runtime_env
-    apply_qt_logging_rules
-    exec 9>&-
-    exec "$qs_bin" -n -p "$qml_path"
-}
-
 resolve_setup_dir() {
     if [[ -x "$launcher_root/setup" && -f "$launcher_root/shell.qml" ]]; then
         printf '%s' "$launcher_root"
@@ -2718,7 +2609,6 @@ ipc_target_help() {
     case "$family" in
         shared) printf 'Family: shared (works across panel families)\n' ;;
         ii)     printf 'Family: ii panel family only\n' ;;
-        waffle) printf 'Family: waffle panel family only\n' ;;
         iris)   printf 'Family: iris panel family only\n' ;;
     esac
 
@@ -3376,7 +3266,7 @@ show_version() {
 # appear once, which is why the block is rewritten rather than appended to.
 _BIND_BEGIN='// >>> inir bind: added with `inir bind --add`, removed with `inir bind --remove <keys>` >>>'
 _BIND_END='// <<< inir bind <<<'
-_BIND_RUNTIME_COMMANDS="close-window terminal browser settings settings-window colorpicker restart"
+_BIND_RUNTIME_COMMANDS="close-window terminal browser settings colorpicker restart"
 
 _bind_niri_dir() { printf '%s\n' "${XDG_CONFIG_HOME:-$HOME/.config}/niri"; }
 
@@ -3542,10 +3432,6 @@ Mod+Tab|overview toggle|The overview|ii
 Mod+A|sidebarLeft toggle|Left sidebar: AI chat and apps|ii
 Mod+N|sidebarRight toggle|Right sidebar: toggles, notes and settings|ii
 Mod+Slash|cheatsheet toggle|Keyboard shortcuts|ii
-Mod+Space|search toggle|Start menu and search|waffle
-Mod+A|wactionCenter toggle|Action center|waffle
-Mod+N|wnotificationCenter toggle|Notification center|waffle
-Mod+W|wwidgets toggle|Widgets|waffle
 Mod+V|clipboard toggle|Clipboard history|all
 Mod+Shift+S|region screenshot|Screenshot a region|all
 Mod+Shift+T|region ocr|Copy the text in a region|all
@@ -3642,7 +3528,7 @@ run_bind_command() {
         -h|--help|"")
             cat <<'USAGE'
 Usage: inir bind [--add] <keys> <call…>
-       inir bind --remove <keys> | --list | --examples [iris|ii|waffle|all]
+       inir bind --remove <keys> | --list | --examples [iris|ii|all]
 
 Makes a Niri keybind for any inir call and tells you what those keys do now.
   inir bind Mod+O orbit toggle            the line, checked, and any bind it would replace
@@ -3938,7 +3824,7 @@ Usage: inir dev audit [--all] [--all-families] [DESTINATION...]
 
 Audit destinations related to changed worktree files, or the destinations
 named explicitly. --all restores the exhaustive audit. The active panel
-family is used by default; --all-families audits ii, waffle, and iris.
+family is used by default; --all-families audits ii and iris.
 EOF
                 return 0
                 ;;
@@ -4009,7 +3895,7 @@ EOF
     elif git -C "$launcher_root" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
         while IFS= read -r -d '' changed_path; do
             case "$changed_path" in
-                GlobalStates.qml|ShellIiPanels.qml|ShellWafflePanels.qml|ShellIrisPanels.qml|shell.qml|settings.qml|waffleSettings.qml|defaults/config.json|modules/common/Config.qml|modules/common/Appearance.qml|modules/common/Looks.qml|modules/common/widgets/*)
+                GlobalStates.qml|ShellIiPanels.qml|ShellIrisPanels.qml|shell.qml|settings.qml|defaults/config.json|modules/common/Config.qml|modules/common/Appearance.qml|modules/common/widgets/*)
                     : ;; # Broad files do not turn a focused audit into an exhaustive one.
                 modules/iris/*) select_prefix "iris" ;;
                 modules/sidebarLeft/aiChat/*|modules/sidebarLeft/AiChat.qml|modules/sidebarLeft/ApiInputBoxIndicator.qml|services/Ai.qml|services/ai/*)
@@ -4045,18 +3931,11 @@ EOF
                 modules/overview/*) select_prefix "overview" ;;
                 modules/wallpaperSelector/*) select_prefix "wallpaper" ;;
                 modules/tilingAssistance/*) select_prefix "tiling" ;;
-                modules/waffle/startMenu/*) select_prefix "waffle/start"; select_prefix "waffle/all-apps"; select_prefix "waffle/search" ;;
-                modules/waffle/actionCenter/*) select_prefix "waffle/action-center" ;;
-                modules/waffle/notificationCenter/*) select_prefix "waffle/notification-center" ;;
-                modules/waffle/widgets/*) select_prefix "waffle/widgets" ;;
-                modules/waffle/taskView/*) select_prefix "waffle/taskview" ;;
                 modules/settings/SettingsOverlay.qml|modules/settings/SettingsPageRegistry.qml)
                     : ;;
                 modules/settings/*Config.qml)
                     area="${changed_path##*/}"; area="${area%Config.qml}"; select_settings_area "$area" ;;
-                modules/waffle/settings/pages/W*Page.qml)
-                    area="${changed_path##*/}"; area="${area#W}"; area="${area%Page.qml}"; select_settings_area "$area" ;;
-                services/Notifications.qml) select_prefix "sidebar-right/notifications"; select_prefix "waffle/notification-center" ;;
+                services/Notifications.qml) select_prefix "sidebar-right/notifications" ;;
                 services/Weather.qml) select_prefix "sidebar-right/weather"; select_prefix "dashboard" ;;
                 services/Events.qml|services/Calendar*.qml) select_prefix "sidebar-right/calendar"; select_prefix "sidebar-right/events"; select_prefix "dashboard" ;;
                 services/Todo.qml) select_prefix "sidebar-right/todo"; select_prefix "dashboard" ;;
@@ -4078,7 +3957,7 @@ EOF
     trap '"$qs_bin" -p "$config_dir" ipc call dev close >/dev/null 2>&1 || true; current_family="$(jq -r '\''.panelFamily // "ii"'\'' "$config_file" 2>/dev/null)"; if [[ "$current_family" != "$original_family" ]]; then "$qs_bin" -p "$config_dir" ipc call panelFamily set "$original_family" >/dev/null 2>&1 || true; fi' INT TERM
 
     local families=("$family")
-    $include_all_families && families=(ii waffle iris)
+    $include_all_families && families=(ii iris)
     for family in "${families[@]}"; do
         if [[ "$(jq -r '.panelFamily // "ii"' "$config_file" 2>/dev/null)" != "$family" ]]; then
             response="$("$qs_bin" -p "$config_dir" ipc call panelFamily set "$family" 2>&1 || true)"
@@ -4556,79 +4435,6 @@ case "$command_name" in
         done
         resolve_config_dir
         open_settings "$config_dir"
-        ;;
-    settings-window)
-        require_qs
-        window_mode="open"
-        while [[ $# -gt 0 ]]; do
-            case "$1" in
-                --toggle)
-                    window_mode="toggle"
-                    shift
-                    ;;
-                -c|--config)
-                    parse_config_flag "$@"
-                    shift 2
-                    ;;
-                -h|--help)
-                    usage
-                    exit 0
-                    ;;
-                *)
-                    echo "Unknown option: $1" >&2
-                    exit 1
-                    ;;
-            esac
-        done
-        resolve_config_dir
-        open_detached_qml_window "$config_dir" "settings.qml" "$window_mode"
-        ;;
-    waffle-settings-window)
-        require_qs
-        window_mode="open"
-        while [[ $# -gt 0 ]]; do
-            case "$1" in
-                --toggle)
-                    window_mode="toggle"
-                    shift
-                    ;;
-                -c|--config)
-                    parse_config_flag "$@"
-                    shift 2
-                    ;;
-                -h|--help)
-                    usage
-                    exit 0
-                    ;;
-                *)
-                    echo "Unknown option: $1" >&2
-                    exit 1
-                    ;;
-            esac
-        done
-        resolve_config_dir
-        open_detached_qml_window "$config_dir" "waffleSettings.qml" "$window_mode"
-        ;;
-    welcome)
-        require_qs
-        while [[ $# -gt 0 ]]; do
-            case "$1" in
-                -c|--config)
-                    parse_config_flag "$@"
-                    shift 2
-                    ;;
-                -h|--help)
-                    usage
-                    exit 0
-                    ;;
-                *)
-                    echo "Unknown option: $1" >&2
-                    exit 1
-                    ;;
-            esac
-        done
-        resolve_config_dir
-        open_detached_qml_window "$config_dir" "welcome.qml"
         ;;
     repair)
         require_qs

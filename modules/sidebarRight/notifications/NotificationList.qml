@@ -55,7 +55,6 @@ Item {
         ColumnLayout {
             anchors.centerIn: parent
             spacing: 4
-            visible: !emptyMascot.active
 
             MaterialPlaceholderMessage {
                 Layout.alignment: Qt.AlignHCenter
@@ -66,29 +65,6 @@ Item {
             }
         }
 
-        ColumnLayout {
-            anchors.centerIn: parent
-            spacing: 4
-            visible: emptyMascot.active
-
-            MascotImage {
-                id: emptyMascot
-                Layout.alignment: Qt.AlignHCenter
-                Layout.preferredWidth: 128
-                Layout.preferredHeight: 128
-                surface: "notifications"
-                fallbackSurface: "emptyStates"
-                pose: "cleanup-sweep-loop"
-            }
-
-            StyledText {
-                Layout.alignment: Qt.AlignHCenter
-                text: Notifications.silent ? Translation.tr("Muted") : Translation.tr("All caught up")
-                font.pixelSize: Appearance.font.pixelSize.normal
-                font.weight: Font.DemiBold
-                color: Appearance.colors.colOnSurface
-            }
-        }
     }
 
     ButtonGroup {

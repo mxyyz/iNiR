@@ -20,14 +20,6 @@ function setup_user_groups(){
   local groups_before=" $(id -nG) "
   local required_groups="video,i2c,input"
 
-  # Void requires network and bluetooth group membership for their providers.
-  if [[ "${OS_GROUP_ID:-}" == void ]]; then
-    required_groups="video,i2c,input,network"
-    if ${INSTALL_TOOLKIT:-true} && getent group bluetooth >/dev/null; then
-      required_groups+=",bluetooth"
-    fi
-  fi
-
   x pkg_sudo usermod -aG "$required_groups" "$(whoami)"
 
   local group group_changed=false
@@ -39,11 +31,7 @@ function setup_user_groups(){
   done
 
   if [[ "$group_changed" == true ]]; then
-    if [[ "${OS_GROUP_ID:-}" == void ]]; then
-      INIR_REBOOT_REASONS+=("Your user joined ${required_groups//,/, }: Void session, network, Bluetooth and input access need the new group membership")
-    else
-      INIR_REBOOT_REASONS+=("Your user joined video, i2c and input: brightness, keyboard lights and the on-screen keyboard need it")
-    fi
+    INIR_REBOOT_REASONS+=("Your user joined video, i2c and input: brightness, keyboard lights and the on-screen keyboard need it")
   fi
 
   log_success "User added to ${required_groups//,/, } groups"
@@ -56,76 +44,6 @@ function setup_user_groups(){
 function setup_systemd_services(){
   tui_info "Setting up systemd services..."
 
-  if [[ "${OS_GROUP_ID:-}" == void ]]; then
-    tui_info "Setting up Void runit session services..."
-    if ! command -v sv >/dev/null 2>&1; then
-      log_warning "runit 'sv' not found, skipping Void service setup"
-      return 0
-    fi
-    if [[ "${assume_yes:-false}" == true ]] \
-        || { [[ "${ask:-true}" == true ]] && tui_confirm "Enable Void session services (dbus, elogind, polkitd, turnstiled)?" "yes"; }; then
-      if elevate sh -c 'ln -sfn /etc/sv/dbus /var/service/dbus && ln -sfn /etc/sv/elogind /var/service/elogind && ln -sfn /etc/sv/polkitd /var/service/polkitd && ln -sfn /etc/sv/turnstiled /var/service/turnstiled'; then
-        log_success "Void session services enabled"
-      else
-        log_warning "Could not enable all Void session services"
-        return 1
-      fi
-    else
-      log_info "Enable Void session services with: sudo ln -s /etc/sv/{dbus,elogind,polkitd,turnstiled} /var/service/"
-    fi
-    if [[ -f /etc/turnstile/turnstiled.conf ]]; then
-      if [[ "${assume_yes:-false}" == true ]] \
-          || { [[ "${ask:-true}" == true ]] && tui_confirm "Set turnstile manage_rundir=no for elogind?" "yes"; }; then
-        if elevate sh -c 'if grep -q "^[[:space:]]*manage_rundir[[:space:]]*=" /etc/turnstile/turnstiled.conf; then sed -i -E "s/^[[:space:]]*manage_rundir[[:space:]]*=.*/manage_rundir = no/" /etc/turnstile/turnstiled.conf; else printf "\nmanage_rundir = no\n" >> /etc/turnstile/turnstiled.conf; fi'; then
-          log_success "Turnstile configured to use elogind's runtime directory"
-        else
-          log_warning "Could not configure turnstile for elogind"
-          return 1
-        fi
-      else
-        log_warning "Turnstile still manages /run/user; set manage_rundir = no for elogind"
-      fi
-    fi
-    # NetworkManager activation is intentionally deferred until the installer
-    # has finished. Replacing Void's base dhcpcd/wpa_supplicant services can
-    # briefly interrupt the connection that is still needed during setup.
-    # Power Profiles is a base UI capability; Quickshell talks to its system
-    # D-Bus service directly, so Void needs the packaged runit service active.
-    if [[ ! -d /etc/sv/power-profiles-daemon ]]; then
-      log_warning "Power Profiles service directory missing (/etc/sv/power-profiles-daemon); reinstall power-profiles-daemon"
-    elif [[ "${assume_yes:-false}" == true ]] \
-        || { [[ "${ask:-true}" == true ]] && tui_confirm "Enable power-profiles-daemon system service?" "yes"; }; then
-      if elevate sh -c 'ln -sfn /etc/sv/power-profiles-daemon /var/service/power-profiles-daemon'; then
-        log_success "Power Profiles service enabled"
-      else
-        log_warning "Could not enable power-profiles-daemon"
-        return 1
-      fi
-    else
-      log_info "Enable Power Profiles with: sudo ln -s /etc/sv/power-profiles-daemon /var/service/"
-    fi
-    # Bluetooth toolkit provider: enable bluetoothd via runit with confirmation.
-    if ${INSTALL_TOOLKIT:-true}; then
-      if [[ -d /etc/sv/bluetoothd ]]; then
-        if [[ "${assume_yes:-false}" == true ]] \
-            || { [[ "${ask:-true}" == true ]] && tui_confirm "Enable Bluetooth (bluetoothd) system service?" "yes"; }; then
-          if elevate sh -c 'ln -sfn /etc/sv/bluetoothd /var/service/bluetoothd'; then
-            log_success "Bluetooth service enabled"
-          else
-            log_warning "Could not enable Bluetooth service"
-            return 1
-          fi
-        else
-          log_info "Enable Bluetooth with: sudo ln -s /etc/sv/bluetoothd /var/service/"
-        fi
-      else
-        log_warning "Bluetooth service directory missing (/etc/sv/bluetoothd); reinstall the bluez package"
-      fi
-      configure_void_ydotool_uinput || return 1
-    fi
-    return 0
-  fi
-  
   # Check if systemd is available
   if ! command -v systemctl &>/dev/null || [[ ! -d /run/systemd/system ]]; then
     log_warning "systemd not available, skipping service setup"
@@ -254,11 +172,7 @@ function setup_super_daemon(){
     x mkdir -p "$runit_dir"
     local daemon_quoted
     daemon_quoted="$(printf '%s' "$daemon_dst" | sed "s/'/'\\\\''/g")"
-    if [[ "$supervisor" == turnstile ]]; then
-      printf '#!/bin/sh\n# Managed by iNiR.\nexec chpst -e "$TURNSTILE_ENV_DIR" /usr/bin/env python3 '\''%s'\''\n' "$daemon_quoted" > "$runit_run"
-    else
-      printf '#!/bin/sh\n# Managed by iNiR.\nexec /usr/bin/env python3 '\''%s'\''\n' "$daemon_quoted" > "$runit_run"
-    fi
+    printf '#!/bin/sh\n# Managed by iNiR.\nexec /usr/bin/env python3 '\''%s'\''\n' "$daemon_quoted" > "$runit_run"
     chmod +x "$runit_run"
     if command -v sv >/dev/null 2>&1 && sv status "$runit_dir" 2>/dev/null | grep -q '^run:'; then
       sv restart "$runit_dir" >/dev/null 2>&1 || return 1
@@ -414,7 +328,5 @@ else
 fi
 
 # NOTE: SDDM theme setup is in 3.files.sh AFTER the theming templates are deployed.
-# NOTE: On Void, SDDM activation is offered by run_install only after all install
-# tasks complete because linking a runit service starts it immediately.
 # NOTE: install-python-packages is called in 3.files.sh after requirements.txt
 # is deployed to the target. No need to call it here.

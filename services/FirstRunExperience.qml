@@ -10,8 +10,6 @@ Singleton {
     id: root
     property string firstRunFilePath: FileUtils.trimFileProtocol(`${Directories.state}/user/first_run.txt`)
     property string firstRunFileContent: "This file is just here to confirm you've been greeted :>"
-    property string firstRunNotifSummary: "Welcome!"
-    property string firstRunNotifBody: "Hit Super+/ for a list of keybinds"
     property string defaultWallpaperPath: ""
     property bool _pendingFirstRun: false
 
@@ -22,9 +20,6 @@ Singleton {
         checkFirstRunProc.running = true
     }
 
-    function enableNextTime() {
-        Quickshell.execDetached(["/usr/bin/rm", "-f", root.firstRunFilePath])
-    }
     function disableNextTime() {
         Quickshell.execDetached(["/bin/sh", "-c", `echo "${root.firstRunFileContent}" > "${root.firstRunFilePath}"`])
     }
@@ -32,7 +27,6 @@ Singleton {
     function handleFirstRun(): void {
         if (root.defaultWallpaperPath.length > 0)
             Quickshell.execDetached([Directories.wallpaperSwitchScriptPath, root.defaultWallpaperPath])
-        Quickshell.execDetached([Quickshell.shellPath("scripts/inir"), "welcome"])
     }
 
     Process {

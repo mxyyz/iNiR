@@ -7,9 +7,6 @@ import qs.modules.common.models
 import qs.modules.common.widgets
 import qs.modules.common.functions
 import qs.modules.pill
-import qs.modules.sidebarLeft.animeSchedule
-import qs.modules.sidebarLeft.innertune
-import qs.modules.sidebarLeft.news
 // DISABLED: webapps — requires quickshell-webengine rebuild, re-enable when ready
 // import qs.modules.sidebarLeft.plugins
 import QtQuick
@@ -31,17 +28,10 @@ Item {
     property bool geometryPreviewActive: false
     property string outerSizeMode: "full"
 
-    property bool aiChatEnabled: (Config.options?.policies?.ai ?? 0) !== 0
     property bool translatorEnabled: (Config.options?.sidebar?.translator?.enable ?? false)
-    property bool animeEnabled: (Config.options?.policies?.weeb ?? 0) !== 0
-    property bool animeCloset: (Config.options?.policies?.weeb ?? 0) === 2
-    property bool animeScheduleEnabled: Config.options?.sidebar?.animeSchedule?.enable ?? false
-    property bool wallhavenEnabled: Config.options?.sidebar?.wallhaven?.enable !== false
-    property bool newsEnabled: Config.options?.sidebar?.news?.enable ?? true
     property bool widgetsEnabled: Config.options?.sidebar?.widgets?.enable ?? true
     property bool toolsEnabled: Config.options?.sidebar?.tools?.enable ?? false
     property bool softwareEnabled: Config.options?.sidebar?.software?.enable ?? false
-    property bool ytMusicEnabled: Config.options?.sidebar?.ytmusic?.enable ?? false
     // DISABLED: webapps — requires quickshell-webengine
     property bool pluginsEnabled: false // Config.options?.sidebar?.plugins?.enable ?? false
 
@@ -91,8 +81,7 @@ Item {
     function _doRestoreLastPlugin(): void {}
 
     readonly property var _tabDefaultOrder: [
-        "widgets", "ai", "translator", "anime", "animeSchedule",
-        "wallhaven", "news", "ytmusic", "tools", "software"
+        "widgets", "translator", "tools", "software"
     ]
     readonly property var resolvedTabOrder: {
         const result = []
@@ -118,13 +107,7 @@ Item {
     property var tabButtonList: {
         const result = []
         if (root.widgetsEnabled) result.push({ id: "widgets", icon: "widgets", name: Translation.tr("Widgets") })
-        if (root.aiChatEnabled) result.push({ id: "ai", icon: "neurology", name: Translation.tr("Intelligence") })
         if (root.translatorEnabled) result.push({ id: "translator", icon: "translate", name: Translation.tr("Translator") })
-        if (root.animeEnabled && !root.animeCloset) result.push({ id: "anime", icon: "bookmark_heart", name: Translation.tr("Anime") })
-        if (root.animeScheduleEnabled) result.push({ id: "animeSchedule", icon: "calendar_month", name: Translation.tr("Schedule") })
-        if (root.wallhavenEnabled) result.push({ id: "wallhaven", icon: "collections", name: Translation.tr("Wallpapers") })
-        if (root.newsEnabled) result.push({ id: "news", icon: "newspaper", name: Translation.tr("News") })
-        if (root.ytMusicEnabled) result.push({ id: "ytmusic", icon: "library_music", name: Translation.tr("YT Music") })
         if (root.toolsEnabled) result.push({ id: "tools", icon: "build", name: Translation.tr("Tools") })
         if (root.softwareEnabled) result.push({ id: "software", icon: "store", name: Translation.tr("Software") })
         // DISABLED: webapps — requires quickshell-webengine rebuild
@@ -167,19 +150,11 @@ Item {
         if (index >= 0 && swipeView.currentIndex !== index) swipeView.currentIndex = index
     }
 
-    function ensureActiveTabReady(): void {
-        if (!GlobalStates.sidebarLeftOpen) return
-        const currentTab = root.tabButtonList[swipeView.currentIndex]
-        if (currentTab?.id === "ai") Ai.ensureInitialized()
-    }
-
     function applyDevDestination(): void {
         if (!DevNavigation.currentDestination.startsWith("sidebar-left/")) return
         const view = DevNavigation.currentDestination.substring("sidebar-left/".length)
         const iconByView = {
-            "widgets": "widgets", "ai": "neurology", "translator": "translate",
-            "anime": "bookmark_heart", "anime-schedule": "calendar_month",
-            "wallhaven": "collections", "news": "newspaper", "ytmusic": "library_music",
+            "widgets": "widgets", "translator": "translate",
             "tools": "build", "software": "store"
         }
         const icon = iconByView[view] ?? ""
@@ -202,8 +177,7 @@ Item {
     Connections {
         target: GlobalStates
         function onSidebarLeftOpenChanged(): void {
-            if (GlobalStates.sidebarLeftOpen) root.ensureActiveTabReady()
-            else root.tabEditMode = false
+            if (!GlobalStates.sidebarLeftOpen) root.tabEditMode = false
         }
     }
 
@@ -634,7 +608,6 @@ Item {
                         tabBar.setCurrentIndex(currentIndex)
                         const currentTab = root.tabButtonList[currentIndex]
                         root.selectedTabId = currentTab?.id ?? ""
-                        root.ensureActiveTabReady()
                     }
                     interactive: !root.tabEditMode
                         && !(currentItem?.item?.editMode ?? false)
@@ -666,13 +639,7 @@ Item {
                             sourceComponent: {
                                 switch (modelData.icon) {
                                     case "widgets": return widgetsComp
-                                    case "neurology": return aiChatComp
                                     case "translate": return translatorComp
-                                    case "bookmark_heart": return animeComp
-                                    case "calendar_month": return animeScheduleComp
-                                    case "collections": return wallhavenComp
-                                    case "newspaper": return newsComp
-                                    case "library_music": return ytMusicComp
                                     case "build": return toolsComp
                                     case "store": return softwareComp
                                     // DISABLED: webapps
@@ -697,20 +664,7 @@ Item {
         }
 
         Component { id: widgetsComp; WidgetsView {} }
-        Component { id: aiChatComp; AiChat {} }
         Component { id: translatorComp; Translator {} }
-        Component { id: animeComp; Anime {} }
-        Component { id: animeScheduleComp; AnimeScheduleView {} }
-        Component {
-            id: wallhavenComp
-            WallhavenView {
-                screenWidth: root.screenWidth
-                screenHeight: root.screenHeight
-                panelScreen: root.panelScreen
-            }
-        }
-        Component { id: newsComp; NewsView {} }
-        Component { id: ytMusicComp; InnerTuneView {} }
         Component { id: toolsComp; ToolsView {} }
         Component { id: softwareComp; SoftwareView {} }
         // DISABLED: webapps — requires quickshell-webengine rebuild
@@ -750,12 +704,6 @@ Item {
                 }
                 else if (event.key === Qt.Key_O) {
                     GlobalStates.sidebarLeftExpanded = !GlobalStates.sidebarLeftExpanded
-                    event.accepted = true
-                }
-                else if (event.key === Qt.Key_P) {
-                    GlobalStates.sidebarLeftOpen = false
-                    GlobalStates.sidebarLeftExpanded = false
-                    GlobalStates.aiChatDetached = true
                     event.accepted = true
                 }
             }

@@ -12,7 +12,7 @@ import qs.services
 // On-screen keyboard for lock screen password entry.
 // Designed for touch and tablet users. Connects via signals -- the lock surface
 // wires keyClicked/backspaceClicked/enterClicked to its TextInput.
-// Exposes theme properties so both ii (Appearance) and waffle (Looks) can use it.
+// Exposes theme properties so each family can skin it.
 Rectangle {
     id: kbd
     height: 290
@@ -113,7 +113,7 @@ Rectangle {
         }
     }
 
-    // Theme properties — defaults are ii (Appearance). Override for waffle (Looks).
+    // Theme properties — defaults are ii (Appearance).
     property color themeBgColor: ColorUtils.transparentize(Appearance.colors.colLayer0, 0.06)
     property color themeKeySurfaceColor: Appearance.colors.colLayer1
     property color themeTextColor: Appearance.colors.colOnSurface

@@ -361,7 +361,6 @@ Item {
                 : ctl.moduleId === "audio" ? audioModel
                 : ctl.moduleId === "mic" ? micModel
                 : ctl.moduleId === "easyEffects" ? easyEffectsModel
-                : ctl.moduleId === "musicRecognition" ? musicModel
                 : ctl.moduleId === "osk" ? oskModel
                 : ctl.moduleId === "snip" ? snipModel
                 : ctl.moduleId === "colorPicker" ? colourModel
@@ -646,7 +645,6 @@ Item {
     Component { id: audioModel; AudioToggle {} }
     Component { id: micModel; MicToggle {} }
     Component { id: easyEffectsModel; EasyEffectsToggle {} }
-    Component { id: musicModel; MusicRecognitionToggle {} }
     Component { id: oskModel; OnScreenKeyboardToggle {} }
     Component { id: snipModel; ScreenSnipToggle {} }
     Component { id: colourModel; ColorPickerToggle {} }

@@ -98,12 +98,6 @@ depends=(
   pavucontrol
   cava
   easyeffects
-  mpv
-  mpv-mpris
-  yt-dlp
-  yt-dlp-ejs
-  deno
-  socat
 
   #--- Theming ---
   noto-fonts-emoji
@@ -145,18 +139,10 @@ depends=(
   imagemagick
   ffmpeg
   awww
-  songrec
   mission-center
   tesseract
   tesseract-data-eng
-  tesseract-data-spa
-  tesseract-data-rus
-  tesseract-data-jpn
-  tesseract-data-jpn_vert
-  tesseract-data-chi_sim
-  tesseract-data-chi_sim_vert
-  tesseract-data-chi_tra
-  tesseract-data-chi_tra_vert
+  tesseract-data-deu
   libqalculate
   uv
 

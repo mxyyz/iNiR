@@ -159,10 +159,7 @@ Singleton {
     }
 
     // Wallpaper path resolution for aurora/backdrop
-    readonly property bool isWaffleFamily: (Config.options?.panelFamily ?? "ii") === "waffle"
-    readonly property bool useBackdropWallpaper: isWaffleFamily
-        ? ((Config.options?.waffles?.background?.backdrop?.enable ?? false) && (Config.options?.waffles?.background?.backdrop?.hideWallpaper ?? false))
-        : ((Config.options?.background?.backdrop?.enable ?? false) && (Config.options?.background?.backdrop?.hideWallpaper ?? false))
+    readonly property bool useBackdropWallpaper: (Config.options?.background?.backdrop?.enable ?? false) && (Config.options?.background?.backdrop?.hideWallpaper ?? false)
     readonly property bool backdropOnlyShadowOverrideWanted: Config.ready && CompositorService.isNiri && useBackdropWallpaper
     property bool _backdropShadowSyncQueued: false
 
@@ -232,14 +229,8 @@ Singleton {
     function currentThemingWallpaperPath(monitorName = ""): string {
         const targetMonitor = monitorName || (WallpaperListener.multiMonitorEnabled ? WallpaperListener.getFocusedMonitor() : "")
         const mainPath = currentMainWallpaperPath(targetMonitor)
-        const waffleMainPath = currentWaffleWallpaperPath(targetMonitor)
 
         if (root.useBackdropWallpaper || root.useBackdropForColors) {
-            if (root.isWaffleFamily) {
-                const waffleBackdrop = Config.options?.waffles?.background?.backdrop ?? {}
-                return (waffleBackdrop.useMainWallpaper ?? true) ? waffleMainPath : (waffleBackdrop.wallpaperPath || waffleMainPath)
-            }
-
             const iiBackdrop = Config.options?.background?.backdrop ?? {}
             if (iiBackdrop.useMainWallpaper ?? true)
                 return mainPath
@@ -251,7 +242,7 @@ Singleton {
             return iiBackdrop.wallpaperPath || mainPath
         }
 
-        return root.isWaffleFamily ? waffleMainPath : mainPath
+        return mainPath
     }
 
     readonly property string effectiveWallpaperPath: {
@@ -655,16 +646,10 @@ Singleton {
         return Config.options?.background?.wallpaperPath ?? ""
     }
 
-    function currentWaffleWallpaperPath(monitorName = ""): string {
-        const mainPath = currentMainWallpaperPath(monitorName)
-        const waffleBackground = Config.options?.waffles?.background ?? {}
-        return (waffleBackground.useMainWallpaper ?? true) ? mainPath : (waffleBackground.wallpaperPath || mainPath)
-    }
-
     // The image the desktop actually shows on an output: the backdrop's when it replaces the wallpaper
     // ("show only the backdrop", ii and iRiS), the main wallpaper otherwise. Glass and Lume read this one,
     // or they sample a wallpaper nobody sees.
-    readonly property bool desktopShowsBackdrop: !root.isWaffleFamily && root.useBackdropWallpaper
+    readonly property bool desktopShowsBackdrop: root.useBackdropWallpaper
     readonly property real desktopDim: root.desktopShowsBackdrop
         ? Math.max(0, Math.min(1, Number(Config.options?.background?.backdrop?.dim ?? 35) / 100)) : 0
     readonly property real desktopSaturation: root.desktopShowsBackdrop ? Number(Config.options?.background?.backdrop?.saturation ?? 0) : 0
@@ -691,21 +676,6 @@ Singleton {
                     return monitorData.backdropPath
             }
             return iiBackdrop.wallpaperPath || mainPath
-        }
-        case "waffle": {
-            return currentWaffleWallpaperPath(monitorName)
-        }
-        case "waffle-backdrop": {
-            const waffleBackdrop = Config.options?.waffles?.background?.backdrop ?? {}
-            const waffleMain = currentWaffleWallpaperPath(monitorName)
-            if (waffleBackdrop.useMainWallpaper ?? true)
-                return waffleMain
-            if (WallpaperListener.multiMonitorEnabled && monitorName) {
-                const monitorData = WallpaperListener.effectivePerMonitor[monitorName] ?? null
-                if (monitorData && monitorData.backdropPath)
-                    return monitorData.backdropPath
-            }
-            return waffleBackdrop.wallpaperPath || waffleMain
         }
         default:
             return mainPath
@@ -852,42 +822,6 @@ Singleton {
                 root.ensureThumbnailForPath(normalizedPath, "large")
             if (Config.options?.appearance?.wallpaperTheming?.useBackdropForColors)
                 Quickshell.execDetached([Directories.wallpaperSwitchScriptPath, "--noswitch"])
-            root.changed()
-            return
-        case "waffle":
-            const waffleVisible = (Config.options?.panelFamily ?? "ii") === "waffle"
-            const adoptedWafflePreview = waffleVisible
-                ? root._adoptVisiblePreview(normalizedPath, monitorName)
-                : false
-            if (waffleVisible && !adoptedWafflePreview)
-                root.requestWallpaperBlurTransition("")
-            Config.setNestedValue("waffles.background.useMainWallpaper", false)
-            Config.setNestedValue("waffles.background.wallpaperPath", normalizedPath)
-            Config.setNestedValue("waffles.background.thumbnailPath", thumbnailPath)
-            if (adoptedWafflePreview)
-                root._clearInternalPreview()
-            if (needsThumbnail)
-                root.ensureThumbnailForPath(normalizedPath, "large")
-            // Regen colors from this wallpaper when waffle is active
-            if ((Config.options?.panelFamily ?? "ii") === "waffle") {
-                root._applyInProgress = true
-                _applySuppressTimer.restart()
-                root._queueWallpaperScript(normalizedPath, darkMode, true)
-            }
-            root.changed()
-            return
-        case "waffle-backdrop":
-            Config.setNestedValue("waffles.background.backdrop.useMainWallpaper", false)
-            Config.setNestedValue("waffles.background.backdrop.wallpaperPath", normalizedPath)
-            Config.setNestedValue("waffles.background.backdrop.thumbnailPath", thumbnailPath)
-            if (needsThumbnail)
-                root.ensureThumbnailForPath(normalizedPath, "large")
-            if ((Config.options?.panelFamily ?? "ii") === "waffle"
-                    && (Config.options?.appearance?.wallpaperTheming?.useBackdropForColors ?? false)) {
-                root._applyInProgress = true
-                _applySuppressTimer.restart()
-                root._queueWallpaperScript(normalizedPath, darkMode, true)
-            }
             root.changed()
             return
         default:
@@ -1053,9 +987,6 @@ Singleton {
         const globalTarget = GlobalStates.wallpaperSelectionTarget ?? "main"
         if (globalTarget && globalTarget !== "main")
             return globalTarget
-
-        if ((Config.options?.panelFamily ?? "ii") === "waffle")
-            return (Config.options?.waffles?.background?.useMainWallpaper ?? true) ? "main" : "waffle"
 
         return "main"
     }

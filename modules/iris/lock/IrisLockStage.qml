@@ -918,7 +918,7 @@ Item {
         }
     }
 
-    // The shared lock keyboard (Material and Waffle have it too), in the lock's glass: keys type into the password field.
+    // The shared lock keyboard (Material has it too), in the lock's glass: keys type into the password field.
     LockUi.LockKeyboard {
         id: lockKeyboard
         z: 10

@@ -1887,22 +1887,6 @@
         "ai": {
             "textFadeIn": true
         },
-        "booru": {
-            "allowNsfw": false,
-            "defaultProvider": "yandere",
-            "gelbooru": {
-                "apiKey": "",
-                "userId": ""
-            },
-            "downloadPath": {
-                "sfw": "",
-                "nsfw": ""
-            },
-            "limit": 20,
-            "zerochan": {
-                "username": "[unset]"
-            }
-        },
         "cornerOpen": {
             "bottom": false,
             "clickless": false,
@@ -2078,12 +2062,6 @@
                 "currentIndex": -1,
                 "activePlaylistSource": ""
             }
-        },
-        "wallhaven": {
-            "enable": true,
-            "limit": 24,
-            "fitMode": "auto",
-            "apiKey": ""
         },
         "news": {
             "enable": true,
@@ -2367,13 +2345,6 @@
         "autoDismissDelay": 5000,
         "showWeather": true,
         "showDate": true
-    },
-    "welcomeWizard": {
-        "completed": false,
-        "skipped": false,
-        "profile": "balanced",
-        "stylePreset": "material",
-        "performancePreset": "balanced"
     },
     "iris": {
         "sidebars": {
@@ -2696,12 +2667,7 @@
             "livePreview": true,
             "layout": "showcase",
             "motion": true,
-            "liveQuality": "best",
             "sort": "newest",
-            "onlineSort": "top",
-            "topRange": "1w",
-            "sources": ["wallhaven", "live"],
-            "suggestive": false,
             "pinned": []
         },
         "player": {
@@ -2855,246 +2821,19 @@
             "polkit": true
         }
     },
-    "waffles": {
-        "settings": {
-            "useMaterialStyle": false
-        },
-        "modules": {
-            "sidebarLeft": false,
-            "sidebarRight": false,
-            "dock": false,
-            "mediaControls": false,
-            "screenCorners": false,
-            "widgets": true
-        },
-        "tweaks": {
-            "smootherMenuAnimations": true,
-            "switchHandlePositionFix": true
-        },
-        "altSwitcher": {
-            "preset": "thumbnails",
-            "autoHide": true,
-            "autoHideDelayMs": 500,
-            "closeOnFocus": true,
-            "noVisualUi": false,
-            "quickSwitch": false,
-            "useMostRecentFirst": true,
-            "thumbnailWidth": 280,
-            "thumbnailHeight": 180,
-            "scrimOpacity": 0.4,
-            "showOverviewWhileSwitching": false,
-            "monochromeIcons": false,
-            "enableAnimation": true,
-            "animationDurationMs": 300,
-            "backgroundOpacity": 1.0,
-            "blurAmount": 0.0,
-            "scrimDim": 0,
-            "compactStyle": false,
-            "panelAlignment": "center",
-            "useM3Layout": false
-        },
-        "notifications": {
-            "showUnreadCount": true
-        },
-        "background": {
-            "wallpaperPath": "",
-            "thumbnailPath": "",
-            "useMainWallpaper": true,
-            "enableAnimation": true,
-            "hideWhenFullscreen": true,
-            "transition": {
-                "enable": true,
-                "type": "crossfade",
-                "direction": "right",
-                "duration": 800
-            },
-            "effects": {
-                "enableBlur": false,
-                "blurRadius": 32,
-                "dim": 0,
-                "dynamicDim": 0,
-                "enableAnimatedBlur": false,
-                "thumbnailBlurStrength": 70
-            },
-            "backdrop": {
-                "enable": true,
-                "hideWallpaper": false,
-                "useMainWallpaper": true,
-                "wallpaperPath": "",
-                "blurRadius": 32,
-                "dim": 35,
-                "saturation": 0,
-                "contrast": 0,
-                "vignetteEnabled": false,
-                "vignetteIntensity": 0.5,
-                "vignetteRadius": 0.7,
-                "enableAnimation": false,
-                "enableAnimatedBlur": false,
-                "thumbnailPath": ""
-            },
-            "parallax": {
-                "enable": false,
-                "axis": "horizontal",
-                "enableWorkspace": false,
-                "enableSidebar": false,
-                "workspaceShift": 1.0,
-                "workspaceZoom": 1.0,
-                "zoom": 1.0,
-                "autoVertical": true,
-                "vertical": false,
-                "panelShift": 0.12,
-                "widgetsFactor": 1.0,
-                "widgetDepth": 1.0,
-                "pauseDuringTransitions": true,
-                "transitionSettleMs": 220
-            },
-            "widgets": {
-                "clock": {
-                    "enable": false,
-                    "placementStrategy": "leastBusy",
-                    "x": 100,
-                    "y": 100,
-                    "dim": 55,
-                    "fontFamily": "Roboto Flex",
-                    "style": "hero",
-                    "timeFormat": "system",
-                    "dateStyle": "long",
-                    "colorMode": "adaptive",
-                    "showDate": true,
-                    "showSeconds": false,
-                    "showShadow": true,
-                    "showLockStatus": true,
-                    "timeScale": 100,
-                    "dateScale": 100,
-                    "digital": {
-                        "animateChange": true
-                    }
-                }
-            }
-        },
-        "bar": {
-            "bottom": true,
-            "iconSize": 26,
-            "leftAlignApps": false,
-            "monochromeIcons": false,
-            "screenList": [],
-            "activationWatermark": {
-                "enable": true
-            },
-            "desktopPeek": {
-                "hoverPeek": false,
-                "hoverDelay": 500
-            },
-            "notifications": {
-                "showUnreadCount": true
-            },
-            "searchIconSize": 24,
-            "tintTrayIcons": false
-        },
-        "actionCenter": {
-            "toggles": [
-                "network",
-                "hotspot",
-                "bluetooth",
-                "audio",
-                "mic",
-                "easyEffects",
-                "powerProfile",
-                "idleInhibitor",
-                "nightLight",
-                "darkMode",
-                "antiFlashbang",
-                "vpn",
-                "cloudflareWarp",
-                "musicRecognition",
-                "notifications",
-                "onScreenKeyboard",
-                "gameMode",
-                "screenSnip",
-                "colorPicker"
-            ]
-        },
-        "calendar": {
-            "force2CharDayOfWeek": true,
-            "locale": ""
-        },
-        "theming": {
-            "useMaterialColors": true,
-            "font": {
-                "family": "Noto Sans",
-                "scale": 1.0
-            }
-        },
-        "behavior": {
-            "allowMultiplePanels": false
-        },
-        "startMenu": {
-            "sizePreset": "normal",
-            "scale": 1.0
-        },
-        "widgetsPanel": {
-            "showDateTime": true,
-            "showWeather": true,
-            "showSystem": false,
-            "showMedia": true,
-            "showQuickActions": false,
-            "quickActions": [
-                "files",
-                "terminal",
-                "settings",
-                "wallpaper",
-                "screenshot",
-                "screenRecord",
-                "session"
-            ],
-            "weatherHideLocation": false,
-            "showFiles": true,
-            "showTerminal": true,
-            "showSettings": true,
-            "showWallpaper": true,
-            "showScreenshot": true,
-            "showScreenRecord": true,
-            "showSession": true,
-            "showColorScheme": false
-        },
-        "workspaceNames": {},
-        "taskView": {
-            "mode": "centered",
-            "closeOnSelect": false
-        }
-    },
     "familyTransitionAnimation": true,
-    "familyCycle": ["ii", "waffle", "iris"],
-    "panelFamily": "ii",
+    "familyCycle": ["iris"],
+    "panelFamily": "iris",
     "enabledPanels": [
-        "iiBar",
-        "iiBackground",
-        "iiBackdrop",
-        "iiCheatsheet",
-        "iiControlPanel",
-        "iiDock",
-        "iiLock",
-        "iiMediaControls",
-        "iiNotificationPopup",
-        "iiOnScreenDisplay",
-        "iiOnScreenKeyboard",
-        "iiOverlay",
-        "iiOverview",
-        "iiPolkit",
-        "iiRegionSelector",
-        "iiScreenCorners",
-        "iiSessionScreen",
-        "iiSidebarLeft",
-        "iiSidebarRight",
-        "iiTilingOverlay",
-        "iiVerticalBar",
-        "iiWallpaperSelector",
-        "iiWallpaperLauncher",
-        "iiCoverflowSelector",
-        "iiClipboard",
-        "iiShellUpdate",
-        "iiDashboard",
-        "iiMascotCompanion"
+        "irisBar",
+        "irisBackground",
+        "irisPalette",
+        "irisControlCenter",
+        "irisNotificationPopup",
+        "irisOnScreenDisplay",
+        "irisSessionScreen",
+        "irisLock",
+        "irisPolkit"
     ],
     "workspaceStrip": {
         "style": "auto",

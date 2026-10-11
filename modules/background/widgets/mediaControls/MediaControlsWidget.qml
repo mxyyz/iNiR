@@ -57,8 +57,7 @@ AbstractBackgroundWidget {
     readonly property real widgetWidth: Math.round(
         root.sizedGeometry.w * Appearance.fontSizeScale * scaleFactor)
 
-    readonly property bool lyricsAvailable: LyricsService.status === "ok"
-        && LyricsService.lyricsLines.length > 0
+    readonly property bool lyricsAvailable: false
     readonly property bool _shrinksWithoutLyrics: root.placementStrategy === "free"
     property real lyricsSheetHeight: (root.sizedGeometry.hBare !== undefined
             && (root.lyricsAvailable || !root._shrinksWithoutLyrics))
@@ -219,10 +218,7 @@ AbstractBackgroundWidget {
                         { label: Translation.tr("Minimal"), icon: "minimize", value: "minimal" },
                         { label: Translation.tr("Album"), icon: "album", value: "albumart" },
                         { label: Translation.tr("Visualizer"), icon: "graphic_eq", value: "visualizer" },
-                        { label: Translation.tr("Classic"), icon: "music_note", value: "classic" },
-                        { label: Translation.tr("Lyrics"), icon: "lyrics", value: "lyrics" },
-                        { label: Translation.tr("Lyrics wide"), icon: "subtitles", value: "lyricsSplit" },
-                        { label: Translation.tr("Cover"), icon: "art_track", value: "expandingLyrics" }
+                        { label: Translation.tr("Classic"), icon: "music_note", value: "classic" }
                     ]
                     onPicked: value => Config.setNestedValue(mediaQuickRoot.vizPath + "playerPreset", value)
                 }
@@ -389,9 +385,6 @@ AbstractBackgroundWidget {
             case "albumart": return albumArtPlayerComponent
             case "visualizer": return visualizerPlayerComponent
             case "classic": return classicPlayerComponent
-            case "lyrics": return lyricsPlayerComponent
-            case "lyricsSplit": return lyricsSplitPlayerComponent
-            case "expandingLyrics": return expandingLyricsPlayerComponent
             case "full":
             default: return fullPlayerComponent
         }
@@ -439,21 +432,6 @@ AbstractBackgroundWidget {
     Component {
         id: classicPlayerComponent
         ClassicPlayer {}
-    }
-
-    Component {
-        id: lyricsPlayerComponent
-        LyricsPlayer {}
-    }
-
-    Component {
-        id: lyricsSplitPlayerComponent
-        LyricsSplitPlayer {}
-    }
-
-    Component {
-        id: expandingLyricsPlayerComponent
-        ExpandingLyricsPlayer {}
     }
 
     ColumnLayout {

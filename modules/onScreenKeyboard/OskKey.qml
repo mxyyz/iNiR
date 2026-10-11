@@ -19,7 +19,7 @@ RippleButton {
     property bool isEnter: (key.toLowerCase() == "enter" || key.toLowerCase() == "return")
     property real baseWidth: 45
     property real baseHeight: 45
-    // What a family may restyle; the defaults are Material's and Waffle's keycap.
+    // What a family may restyle; the defaults are Material's keycap.
     property color colKeyText: Appearance.zzzEverywhere ? Appearance.zzz.ink : Appearance.colors.colOnLayer1
     property color colKeyTextToggled: Appearance.zzzEverywhere ? Appearance.zzz.onSticker : Appearance.colors.colOnPrimary
     property string keyFontFamily: Appearance.font.family.main

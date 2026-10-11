@@ -97,23 +97,13 @@ Singleton {
             Appearance.colors.colPrimary, 0.84, 2.0, 48),
     ]
 
-    readonly property string coverSourceUrl: {
-        if (MprisController.isYtMusicActive && YtMusic.currentVideoId)
-            return YtMusic.currentThumbnail ?? ""
-        return MprisController.artUrlOf(MprisController.activePlayer) ?? ""
-    }
+    readonly property string coverSourceUrl: MprisController.artUrlOf(MprisController.activePlayer) ?? ""
 
-    readonly property string coverTitle: MprisController.isYtMusicActive && YtMusic.currentVideoId
-        ? YtMusic.currentTitle
-        : (MprisController.titleOf(MprisController.activePlayer) ?? "")
+    readonly property string coverTitle: MprisController.titleOf(MprisController.activePlayer) ?? ""
 
-    readonly property string coverArtist: MprisController.isYtMusicActive && YtMusic.currentVideoId
-        ? YtMusic.currentArtist
-        : (MprisController.artistOf(MprisController.activePlayer) ?? "")
+    readonly property string coverArtist: MprisController.artistOf(MprisController.activePlayer) ?? ""
 
-    readonly property string coverAlbum: MprisController.isYtMusicActive && YtMusic.currentVideoId
-        ? ""
-        : (MprisController.activePlayer?.trackAlbum ?? "")
+    readonly property string coverAlbum: MprisController.activePlayer?.trackAlbum ?? ""
 
     MediaArtworkResolver {
         id: coverArt

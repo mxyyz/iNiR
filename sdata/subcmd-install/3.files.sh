@@ -217,8 +217,6 @@ case "${SKIP_QUICKSHELL}" in
     # Install Python packages now that requirements.txt is in place
     showfun install-python-packages
     v install-python-packages
-    showfun ensure-ytmusic-js-runtime
-    v ensure-ytmusic-js-runtime
 
     if [[ "${IS_UPDATE}" == "true" && "${SKIP_VERIFICATION}" != "true" ]] \
         && [[ -n "${NIRI_SOCKET:-}${WAYLAND_DISPLAY:-}" ]] && ! inir_user_service_is_masked; then
@@ -295,10 +293,7 @@ case "${SKIP_NIRI}" in
       # colors from kdeglobals. Without it, Qt apps can't use KDE color schemes.
       # We check for plasma-integration (not plasma-desktop) because it can be
       # installed standalone for KDE theming without the full Plasma desktop.
-      if xbps-query -p pkgver plasma-integration >/dev/null 2>&1 || \
-         pacman -Q plasma-integration &>/dev/null 2>&1 || \
-         dpkg -l plasma-integration 2>/dev/null | grep -q '^ii' || \
-         rpm -q plasma-integration &>/dev/null 2>&1; then
+      if pacman -Q plasma-integration &>/dev/null 2>&1; then
         # Reconcile previous fallback installs back to KDE when the provider exists.
         sed -i 's/QT_QPA_PLATFORMTHEME "qt6ct"/QT_QPA_PLATFORMTHEME "kde"/' "$NIRI_ENV_TARGET"
         log_success "Qt theme: kde (plasma-integration detected)"

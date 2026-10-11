@@ -16,11 +16,7 @@ fi
 locale_lang() {
   local locale=${LC_ALL:-${LC_MESSAGES:-${LANG:-en}}}
   case "$locale" in
-    ja*|JA*) printf 'jpn' ;;
-    ru*|RU*) printf 'rus' ;;
-    zh_TW*|zh_HK*|zh_MO*|ZH_TW*|ZH_HK*|ZH_MO*) printf 'chi_tra' ;;
-    zh*|ZH*) printf 'chi_sim' ;;
-    es*|ES*) printf 'spa' ;;
+    de*|DE*) printf 'deu' ;;
     *) printf 'eng' ;;
   esac
 }
